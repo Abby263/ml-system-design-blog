@@ -1,0 +1,17 @@
+{
+  "name": "designing-ml-systems",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A build-first series about software, ML, and AI system design.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "marked": "^16.0.0"
+  }
+}

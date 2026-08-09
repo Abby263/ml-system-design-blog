@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.playwright-cli
 
 # next.js
 /.next/
@@ -19,6 +20,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
