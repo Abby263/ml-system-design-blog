@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Designing ML Systems
 
-## Getting Started
+Code and companion material for the **Designing ML Systems** blog series.
 
-First, run the development server:
+The series builds system design depth by starting from practical software systems, evolving them under real constraints, and then carrying those foundations into ML platforms, generative AI systems, and agentic infrastructure.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Repository structure
+
+Each blog gets its own folder under [`blogs/`](blogs/). Blog folders are numbered so the repo follows the same order as the series.
+
+```text
+blogs/
+  01-introduction/
+    README.md        # article notes / blog companion
+    code/            # runnable code for this blog, if applicable
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For implementation-heavy posts, the `code/` directory should include the runnable service, tests, deployment files, load-test scripts, and any local setup instructions needed for that post.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Current posts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| # | Blog | Code |
+|---|------|------|
+| 01 | [Designing ML Systems: Introduction](blogs/01-introduction/) | No executable code for the intro |
 
-## Learn More
+## Planned direction
 
-To learn more about Next.js, take a look at the following resources:
+The series starts with software-system foundations such as URL shorteners, rate limiters, notification systems, chat systems, storage systems, caching, observability, and checkout/payment flows. It then moves into ML system design: recommendation systems, feature stores, training platforms, model serving, prediction platforms, experimentation, RAG, LLM inference, AI control planes, and multi-tenant enterprise AI platforms.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
