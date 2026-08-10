@@ -1,0 +1,199 @@
+{
+  "questions": [
+    {
+      "sectionId": "recognize-what-the-interview-is-actually-testing",
+      "prompt": "An interviewer asks you to design an ML-powered product. What should you establish before discussing a model family?",
+      "options": [
+        { "text": "The product decision, recipient, deadline, error costs, and evidence available at that deadline", "feedback": "Correct. These facts define whether ML is needed and constrain data, metrics, and serving." },
+        { "text": "Which managed model endpoint the company already uses", "feedback": "An existing endpoint is an implementation detail and may not fit the decision contract." },
+        { "text": "The largest model that can fit on one GPU", "feedback": "Hardware fit does not define the product action, labels, or latency budget." },
+        { "text": "Whether the architecture should use microservices", "feedback": "Service boundaries come after ownership, scale, runtime, and failure requirements are known." }
+      ],
+      "answer": 0,
+      "explanation": "ML system design starts with a bounded decision. The action and information deadline determine the intelligence problem and architecture; model choice follows.",
+      "followUp": "Which answer to a clarifying question would make you reject ML and use deterministic logic instead?"
+    },
+    {
+      "sectionId": "start-with-the-decision-contract",
+      "prompt": "Why should prediction and policy usually be written as separate parts of the decision contract?",
+      "options": [
+        { "text": "Prediction estimates uncertainty while policy applies cost, capacity, law, and hard constraints", "feedback": "Correct. Those concerns change on different schedules and require different controls." },
+        { "text": "Policy is always slower than model inference", "feedback": "Policy can be a very fast deterministic function; latency is not the conceptual distinction." },
+        { "text": "A model cannot output a class label", "feedback": "Models can output labels, but direct action prediction often entangles changing business policy with training." },
+        { "text": "Policy removes the need to calibrate probabilities", "feedback": "Cost-sensitive policy often makes calibration more important, not less." }
+      ],
+      "answer": 0,
+      "explanation": "A calibrated estimate can support several policies. Keeping policy explicit allows thresholds and hard controls to change without retraining or allowing a model to override non-negotiable rules.",
+      "followUp": "When might an end-to-end action model still be justified, and which controls would remain outside it?"
+    },
+    {
+      "sectionId": "specify-behaviors-not-components",
+      "prompt": "Which statement is a functional requirement rather than a premature component choice?",
+      "options": [
+        { "text": "Use Kafka for every prediction event", "feedback": "Kafka is one implementation of durable event transport, not the required behavior." },
+        { "text": "Use a feature store backed by Redis", "feedback": "This pre-selects two components before parity, reuse, freshness, or latency needs are established." },
+        { "text": "Record every acknowledged decision with stable version lineage and allow replay", "feedback": "Correct. This is observable behavior that several implementations could satisfy." },
+        { "text": "Deploy the model with Kubernetes", "feedback": "Deployment technology is not an externally visible system behavior." }
+      ],
+      "answer": 2,
+      "explanation": "Requirements should describe capabilities and contracts. Component names belong in the design only after a requirement and trade-off justify them.",
+      "followUp": "What additional requirement would make a durable log more defensible than direct database writes?"
+    },
+    {
+      "sectionId": "turn-adjectives-into-numbers-and-policies",
+      "prompt": "A stakeholder says the model must be “real time.” What is the best next question?",
+      "options": [
+        { "text": "Do you prefer Kafka or Kinesis?", "feedback": "A product adjective has not yet justified either stream technology." },
+        { "text": "Which value must be fresh, by how much, and what user action waits for it?", "feedback": "Correct. This separates feature freshness, inference latency, and feedback processing." },
+        { "text": "Can we reserve GPUs?", "feedback": "Accelerator need depends on model and serving constraints that are not yet known." },
+        { "text": "Should every database use strong consistency?", "feedback": "Consistency should be chosen per state and invariant, not from the word real time." }
+      ],
+      "answer": 1,
+      "explanation": "“Real time” can mean a low-latency response, fresh online features, rapid model updates, or stream processing. Each produces a different architecture.",
+      "followUp": "Give an example where inference is synchronous but feature computation is asynchronous."
+    },
+    {
+      "sectionId": "separate-prediction-policy-and-product-action",
+      "prompt": "A fraud model outputs 0.82. What is still missing before the system can block a payment?",
+      "options": [
+        { "text": "Only the model's training loss", "feedback": "Training loss does not specify how a score maps to a consequential intervention." },
+        { "text": "A versioned policy using calibration, transaction cost, legal controls, and intervention capacity", "feedback": "Correct. The action is a business and operational decision, not a raw score." },
+        { "text": "A second model that predicts the first model's error", "feedback": "A second model does not replace an explicit action policy." },
+        { "text": "A larger feature vector", "feedback": "More evidence may improve prediction, but it does not define the intervention." }
+      ],
+      "answer": 1,
+      "explanation": "Scores become product decisions through policy. The policy must be versioned, auditable, and constrained by error costs and available actions.",
+      "followUp": "How would your policy change if manual review capacity is already exhausted?"
+    },
+    {
+      "sectionId": "build-a-metric-tree-before-choosing-a-loss",
+      "prompt": "A candidate ranker improves NDCG but doubles hide/report rate. How should the release decision be made?",
+      "options": [
+        { "text": "Ship because NDCG is the direct ranking metric", "feedback": "One offline metric cannot override an explicit product-safety guardrail." },
+        { "text": "Reject or constrain the release because launch requires business, system, and guardrail metrics together", "feedback": "Correct. Predictive quality is only one layer of the metric tree." },
+        { "text": "Remove hide/report events from evaluation", "feedback": "Suppressing a bad outcome makes the system less observable, not better." },
+        { "text": "Average NDCG and report rate into an unversioned score", "feedback": "A single opaque average can hide unacceptable guardrail violations." }
+      ],
+      "answer": 1,
+      "explanation": "A release gate should combine objective improvement with system constraints and product guardrails. Some guardrails are hard limits rather than terms to average away.",
+      "followUp": "Which metric would you use to verify that predicted probabilities support stable cost-based thresholds?"
+    },
+    {
+      "sectionId": "estimate-only-numbers-that-change-the-design",
+      "prompt": "Peak traffic is 5,800 RPS and a safe model replica sustains 250 RPS. What is the architectural purpose of estimating roughly 24 replicas before headroom?",
+      "options": [
+        { "text": "To prove the exact production bill", "feedback": "Back-of-the-envelope inputs are assumptions, not a final capacity benchmark or invoice." },
+        { "text": "To determine whether horizontal replication is plausible and expose the need for benchmarking and headroom", "feedback": "Correct. The estimate identifies pressure and the next measurement." },
+        { "text": "To choose the model's loss function", "feedback": "Serving capacity does not directly choose the statistical training objective." },
+        { "text": "To avoid measuring p99 latency", "feedback": "Replica estimates depend on load tests at the required tail latency; they do not replace them." }
+      ],
+      "answer": 1,
+      "explanation": "Estimation is useful when it changes a component or validates plausibility. Safe per-replica throughput must later be measured under representative features, batching, and p99 targets.",
+      "followUp": "How would burstiness and a slow feature dependency change the replica calculation?"
+    },
+    {
+      "sectionId": "draw-the-smallest-complete-learning-system",
+      "prompt": "Which capability makes an HLD V0 complete even when it uses one service and one scheduled training job?",
+      "options": [
+        { "text": "Every module has its own database", "feedback": "Separate databases create operational boundaries that V0 may not need." },
+        { "text": "It closes the loop from versioned decision and exposure logs to point-in-time training, evaluation, artifact release, and rollback", "feedback": "Correct. Completeness is about responsibilities and contracts, not component count." },
+        { "text": "Training runs on a distributed GPU cluster", "feedback": "Distributed training is only justified when one machine cannot meet data, model, or deadline needs." },
+        { "text": "The model automatically retrains after every event", "feedback": "Continuous online updates can be risky and are not required for a complete initial loop." }
+      ],
+      "answer": 1,
+      "explanation": "A modular monolith can be production-worthy if it satisfies the contract and provides lineage, reproducibility, evaluation, fallback, and rollback.",
+      "followUp": "Which first measured failure would make you evolve this V0?"
+    },
+    {
+      "sectionId": "add-components-only-when-a-contract-breaks",
+      "prompt": "One team owns one batch model, features are computed from one warehouse query, and parity incidents have never occurred. Should a feature store be mandatory?",
+      "options": [
+        { "text": "Yes, every ML architecture needs one", "feedback": "A component is not justified merely because it is common in larger systems." },
+        { "text": "No; keep explicit definitions and add a feature store when reuse, historical correctness, governance, freshness, or latency becomes a measured problem", "feedback": "Correct. The simpler design is appropriate while its contracts hold." },
+        { "text": "Yes, because batch inference requires Redis", "feedback": "Batch inference often does not require an online key-value store at all." },
+        { "text": "No, and feature stores are never useful", "feedback": "They become valuable when multiple consumers need governed historical and online retrieval." }
+      ],
+      "answer": 1,
+      "explanation": "Senior design reasoning includes deciding when a specialized component is not applicable and naming the requirement that would make it applicable later.",
+      "followUp": "Which point-in-time correctness incident would most strongly justify adding an offline feature store?"
+    },
+    {
+      "sectionId": "design-the-event-contract-before-the-training-table",
+      "prompt": "Why is a table containing only clicked items insufficient for training a recommender?",
+      "options": [
+        { "text": "Clicks cannot be represented as labels", "feedback": "Clicks can be labels or signals, but they need exposure context." },
+        { "text": "The system cannot distinguish an ignored impression from an item that was never shown", "feedback": "Correct. Missing exposure and candidate context create selection bias and corrupt negative sampling." },
+        { "text": "Clicked items always have missing IDs", "feedback": "Identifiers may be present; the missing information is what alternatives were eligible and displayed." },
+        { "text": "A recommender must train only on purchases", "feedback": "Different products use several outcomes; none removes the need for exposure logging." }
+      ],
+      "answer": 1,
+      "explanation": "The current system selects what can receive an outcome. Decision and exposure events are therefore part of the ML data contract, not ordinary application logging.",
+      "followUp": "Which event fields would let you replay ranking quality while accounting for position?"
+    },
+    {
+      "sectionId": "choose-the-baseline-that-tests-the-pipeline",
+      "prompt": "Why can logistic regression be a stronger first production milestone than a deep model for tabular risk data?",
+      "options": [
+        { "text": "Linear models are always more accurate", "feedback": "They are not always more accurate; their value is simplicity, calibration, and diagnostic clarity." },
+        { "text": "It quickly tests labels, leakage, feature signs, calibration, serving, and release plumbing", "feedback": "Correct. A transparent baseline validates the system around the model." },
+        { "text": "It removes the need for online evaluation", "feedback": "Every consequential model still needs release and production validation." },
+        { "text": "It can learn arbitrary sequences without feature engineering", "feedback": "A linear model does not inherently model arbitrary ordered history." }
+      ],
+      "answer": 1,
+      "explanation": "A baseline is both a quality comparator and an integration test. Complex models should be introduced after the data and serving loop is trustworthy and a measured limitation justifies them.",
+      "followUp": "Which observed error pattern would justify moving from a linear model to boosted trees?"
+    },
+    {
+      "sectionId": "choose-batch-online-streaming-or-edge-deliberately",
+      "prompt": "A nightly job computes tomorrow's store-level replenishment forecast, and no user waits for it. Which serving mode is the honest default?",
+      "options": [
+        { "text": "Synchronous online inference behind an API", "feedback": "An API may be convenient, but the decision deadline does not require per-request inference." },
+        { "text": "Batch inference with versioned outputs and a completion deadline", "feedback": "Correct. Precomputation is simpler and matches the product action." },
+        { "text": "Streaming inference after every sale", "feedback": "Fresh events do not imply every forecast must be recomputed continuously." },
+        { "text": "On-device inference at each store", "feedback": "Edge complexity is not justified by the stated deadline or connectivity requirements." }
+      ],
+      "answer": 1,
+      "explanation": "Serving mode follows the action deadline and context. Batch is a first-class production architecture, not a less advanced version of online serving.",
+      "followUp": "Which new product requirement would force you to add an online what-if prediction path?"
+    },
+    {
+      "sectionId": "monitor-three-systems-at-once",
+      "prompt": "The prediction API has perfect uptime and stable latency, but approval quality declines. Which observation layer was missing?",
+      "options": [
+        { "text": "Only CPU monitoring", "feedback": "More infrastructure metrics do not reveal whether the decisions remain useful." },
+        { "text": "Decision health, including score distributions, calibration, slices, actions, and delayed outcomes", "feedback": "Correct. An ML system can be technically healthy while statistically or commercially degraded." },
+        { "text": "A larger autoscaling limit", "feedback": "Capacity does not explain quality decline when latency and availability are healthy." },
+        { "text": "A second load balancer", "feedback": "Redundant routing addresses availability, not silent decision degradation." }
+      ],
+      "answer": 1,
+      "explanation": "Production ML requires software, data, and decision monitoring. HTTP success is not evidence that the model or policy is still effective.",
+      "followUp": "Why should input drift not automatically trigger retraining?"
+    },
+    {
+      "sectionId": "make-contracts-concrete",
+      "prompt": "A model expects feature schema v8, but the online service has v7. What is the safest behavior?",
+      "options": [
+        { "text": "Silently reorder fields by name and default anything missing to zero", "feedback": "Silent coercion can create plausible but wrong predictions and erase the compatibility incident." },
+        { "text": "Reject the incompatible bundle and continue with the last-known-good compatible version", "feedback": "Correct. Compatibility is a release gate with an explicit fallback." },
+        { "text": "Serve v8 to half of requests to see what happens", "feedback": "A canary cannot make an incompatible schema valid." },
+        { "text": "Retrain the model during the request", "feedback": "Training is not a request-time compatibility strategy." }
+      ],
+      "answer": 1,
+      "explanation": "Feature order, defaults, types, and preprocessing are part of the model artifact contract. Incompatibility should fail closed to a known-good bundle and alert operators.",
+      "followUp": "Which compatibility checks belong in CI, artifact loading, and request validation respectively?"
+    },
+    {
+      "sectionId": "a-reusable-two-minute-answer",
+      "prompt": "What makes the final two-minute summary convincing rather than a list of components?",
+      "options": [
+        { "text": "It names every cloud service the candidate knows", "feedback": "A catalog of products does not explain the architecture." },
+        { "text": "It reconnects the decision and constraints to V0, earned evolutions, release evidence, failure behavior, and the next scaling trigger", "feedback": "Correct. The summary should preserve the causal chain of the design." },
+        { "text": "It introduces a new model that was not discussed", "feedback": "The closing summary should synthesize decisions, not add unexamined complexity." },
+        { "text": "It repeats only the offline metric", "feedback": "A production design also depends on product, system, and guardrail evidence." }
+      ],
+      "answer": 1,
+      "explanation": "The strongest summary explains why the current architecture exists, how it learns and fails, and what measurable evidence would cause it to evolve.",
+      "followUp": "Which one rejected alternative would you mention to demonstrate the most important trade-off?"
+    }
+  ]
+}

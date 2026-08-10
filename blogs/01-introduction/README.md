@@ -218,10 +218,9 @@ This page stays as the permanent index for *Designing ML Systems*. Every article
 17. **Distributed Job Scheduler** — worker pools, leases, retries, duplicate execution, leader election, scheduling guarantees. *(Coming soon)*
 18. **Multi-Tenant SaaS Platform** — tenant isolation, noisy neighbors, RBAC, ABAC, ACLs, quotas, shared vs. dedicated infra. *(Coming soon)*
 19. **Multi-Region Active-Active Platform** — global routing, regional failure, replication, consistency, conflict resolution. *(Coming soon)*
-20. **CDN** — edge caching, Anycast, origin shielding, invalidation, TTLs, global distribution. *(Coming soon)*
-
 **Part III — Machine Learning System Design**
 
+20. **[ML System Design Prerequisites](../20-ml-system-design-prerequisites/)** — a reusable interview template, decision contracts, metric trees, estimation, end-to-end learning loops, architecture evolution, release gates, and safe failure.
 21. **[Recommendation System](../21-recommendation-system/)** — candidate generation, ranking, embeddings, online/offline features, feedback loops, experimentation, reliability, and global serving.
 22. **[Real-Time Fraud Detection](../22-real-time-fraud-detection/)** — streaming features, low-latency inference, class imbalance, delayed labels, graph evidence, feature freshness, and safe intervention policy.
 23. **ML Feature Store** — online vs. offline features, point-in-time correctness, freshness, training-serving consistency. *(Coming soon)*

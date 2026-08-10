@@ -192,6 +192,85 @@ const fraudFrames = [
   },
 ];
 
+const primerFrames = [
+  {
+    slug: '01-contract-and-v0', title: '01 · DEFINE THE DECISION BEFORE THE MODEL', subtitle: 'ML system design prerequisite interview — contract, requirements, metrics, and the smallest complete loop',
+    ops: [
+      note(55, 120, 330, 225, 'DECISION CONTRACT', ['Recipient · action · deadline', 'Evidence available now', 'Cost of each error', 'Why uncertainty needs ML'], { fill: COLORS.yellow }),
+      note(55, 390, 330, 195, 'FR / NFR', ['Behavior, not products', 'p99 · peak RPS · freshness', 'Availability · audit · privacy', 'Cost per decision'], { fill: COLORS.blue }),
+      note(55, 630, 330, 175, 'METRIC TREE', ['Business outcome', 'Decision quality', 'System health', 'Safety / fairness guardrails'], { fill: COLORS.green }),
+      textOp(450, 120, 'HLD V0 — smallest complete learning loop', 29),
+      box(450, 190, 185, 105, 'Request', { sub: 'entity · context' }),
+      box(710, 190, 260, 105, 'Decision service', { fill: COLORS.blue, sub: 'features + baseline + policy' }),
+      box(1045, 190, 210, 105, 'Action', { fill: COLORS.green, sub: 'request_id + versions' }),
+      arrow(635, 242, 710, 242), arrow(970, 242, 1045, 242),
+      box(1045, 410, 210, 95, 'Decision log', { fill: COLORS.yellow, sub: 'exposure + evidence' }),
+      box(710, 410, 260, 95, 'Point-in-time data', { fill: COLORS.green, sub: 'outcomes + maturity' }),
+      box(450, 410, 185, 95, 'Train + test', { fill: COLORS.purple, sub: 'baseline + slices' }),
+      arrow(1150, 295, 1150, 410, { dashed: true, color: '#2563eb', label: 'record' }),
+      arrow(1045, 457, 970, 457, { dashed: true, color: '#2563eb' }),
+      arrow(710, 457, 635, 457, { dashed: true, color: '#2563eb' }),
+      box(450, 635, 235, 95, 'Versioned artifact', { fill: COLORS.pink, sub: 'schema + calibration' }),
+      arrow(542, 505, 567, 635, { dashed: true, color: '#2563eb', label: 'promote' }),
+      arrow(685, 682, 840, 295, { dashed: true, color: '#2563eb', label: 'load' }),
+      textOp(755, 790, 'Rejected:', 22, { color: COLORS.red }),
+      textOp(875, 790, 'pick the biggest model, then invent the product contract', 21, { color: COLORS.muted }),
+      scribble(870, 805, 1460, 780),
+    ],
+  },
+  {
+    slug: '02-evolution-and-planes', title: '02 · INFRASTRUCTURE MUST BE EARNED', subtitle: 'The online deadline and asynchronous learning plane evolve for different reasons',
+    ops: [
+      textOp(55, 115, 'SYNC · CALLER WAITS', 22, { color: COLORS.red }),
+      box(55, 175, 175, 105, 'Request', { sub: 'parent deadline' }),
+      box(300, 175, 250, 105, 'Decision service', { fill: COLORS.blue, sub: 'parallel batch reads' }),
+      box(620, 175, 210, 105, 'Model', { fill: COLORS.purple, sub: 'preloaded bundle' }),
+      box(900, 175, 220, 105, 'Policy', { fill: COLORS.green, sub: 'constraints + action' }),
+      box(1190, 175, 190, 105, 'Return', { fill: COLORS.yellow, sub: 'bounded p99' }),
+      arrow(230, 227, 300, 227), arrow(550, 227, 620, 227), arrow(830, 227, 900, 227), arrow(1120, 227, 1190, 227),
+      textOp(55, 390, 'ASYNC · DURABLE + REPLAYABLE', 22, { color: '#2563eb' }),
+      box(55, 455, 205, 105, 'Event log', { fill: COLORS.blue, sub: 'decision + exposure' }),
+      box(330, 455, 205, 105, 'Dataset', { fill: COLORS.green, sub: 'point-in-time joins' }),
+      box(605, 455, 205, 105, 'Train + eval', { fill: COLORS.purple, sub: 'baseline + guardrails' }),
+      box(880, 455, 205, 105, 'Registry', { fill: COLORS.yellow, sub: 'lineage + compatibility' }),
+      box(1155, 455, 205, 105, 'Rollout', { fill: COLORS.pink, sub: 'shadow · canary' }),
+      arrow(260, 507, 330, 507, { dashed: true, color: '#2563eb' }), arrow(535, 507, 605, 507, { dashed: true, color: '#2563eb' }),
+      arrow(810, 507, 880, 507, { dashed: true, color: '#2563eb' }), arrow(1085, 507, 1155, 507, { dashed: true, color: '#2563eb' }),
+      arrow(1270, 280, 157, 455, { dashed: true, color: '#2563eb', label: 'record' }),
+      arrow(1260, 455, 725, 280, { dashed: true, color: '#2563eb', label: 'immutable bundle' }),
+      note(55, 650, 280, 160, 'FEATURE STORE?', ['Only for parity, reuse,', 'historical correctness,', 'or low-latency values'], { fill: COLORS.green }),
+      note(385, 650, 280, 160, 'STREAM?', ['Only for replay, fan-out,', 'burst absorption, or', 'fresh event-time state'], { fill: COLORS.blue }),
+      note(715, 650, 280, 160, 'MICROSERVICE?', ['Only for owner, scale,', 'runtime, or measurable', 'failure isolation'], { fill: COLORS.pink }),
+      note(1045, 650, 310, 160, 'REGIONAL CELL?', ['Only for WAN latency,', 'residency, blast radius,', 'or recovery targets'], { fill: COLORS.yellow }),
+    ],
+  },
+  {
+    slug: '03-release-and-failure', title: '03 · PROVE THE SYSTEM CAN CHANGE AND FAIL SAFELY', subtitle: 'Release the complete decision bundle; monitor software, data, and decision health',
+    ops: [
+      textOp(55, 120, 'RELEASE GATES', 25),
+      box(55, 180, 190, 105, 'Offline', { fill: COLORS.blue, sub: 'temporal + slices' }),
+      box(315, 180, 190, 105, 'Replay', { fill: COLORS.green, sub: 'schema + parity' }),
+      box(575, 180, 190, 105, 'Shadow', { fill: COLORS.purple, sub: 'latency + scores' }),
+      box(835, 180, 190, 105, 'Canary', { fill: COLORS.yellow, sub: 'product guardrails' }),
+      box(1095, 180, 210, 105, 'Promote / rollback', { fill: COLORS.pink, sub: 'immutable alias', size: 19 }),
+      arrow(245, 232, 315, 232), arrow(505, 232, 575, 232), arrow(765, 232, 835, 232), arrow(1025, 232, 1095, 232),
+      note(55, 390, 300, 195, 'SOFTWARE HEALTH', ['p99 · errors · saturation', 'queue lag · cache hit rate', 'dependency deadline use'], { fill: COLORS.blue }),
+      note(390, 390, 300, 195, 'DATA HEALTH', ['schema · nulls · range', 'freshness · join coverage', 'training / serving parity'], { fill: COLORS.green }),
+      note(725, 390, 300, 195, 'DECISION HEALTH', ['scores · calibration · slices', 'actions · delayed outcomes', 'business + safety guardrails'], { fill: COLORS.purple }),
+      note(1060, 390, 300, 195, 'SECURITY / PRIVACY', ['least privilege · encryption', 'poisoning + artifact integrity', 'retention · residency · audit'], { fill: COLORS.pink }),
+      textOp(55, 665, 'FALLBACK LADDER', 23, { color: COLORS.red }),
+      box(55, 715, 225, 85, 'Full decision', { fill: COLORS.green }),
+      box(350, 715, 225, 85, 'Skip optional data', { fill: COLORS.blue, size: 19 }),
+      box(645, 715, 225, 85, 'Smaller model', { fill: COLORS.purple, size: 21 }),
+      box(940, 715, 225, 85, 'Known-safe baseline', { fill: COLORS.yellow, size: 18 }),
+      box(1235, 715, 260, 85, 'Stop / human action', { fill: COLORS.pink, size: 19 }),
+      arrow(280, 757, 350, 757), arrow(575, 757, 645, 757), arrow(870, 757, 940, 757), arrow(1165, 757, 1235, 757),
+      textOp(1270, 650, 'Recovery proof:', 19, { color: COLORS.red }),
+      textOp(1270, 680, 'replay · checksum · parity · RTO', 17, { color: COLORS.muted, anchor: 'middle' }),
+    ],
+  },
+];
+
 function svgFor(frame) {
   const body = frame.ops.map((op) => {
     if (op.kind === 'text') return `<text x="${op.x}" y="${op.y}" fill="${op.color}" font-family="${op.family}" font-size="${op.size}" font-weight="${op.weight}" text-anchor="${op.anchor}">${esc(op.text)}</text>`;
@@ -278,6 +357,7 @@ async function writeSet(folder, prefix, frames) {
   await writeFile(path.join(dir, `${prefix}-interview-board.excalidraw`), `${JSON.stringify(sceneFor(frames), null, 2)}\n`);
 }
 
+await writeSet('blogs/20-ml-system-design-prerequisites', 'ml-system-design-prerequisites', primerFrames);
 await writeSet('blogs/21-recommendation-system', 'recommendation-system', recFrames);
 await writeSet('blogs/22-real-time-fraud-detection', 'fraud-detection', fraudFrames);
-console.log('Generated two editable boards and six interview-stage SVGs.');
+console.log('Generated three editable boards and nine interview-stage SVGs.');

@@ -29,8 +29,8 @@ const CANONICAL_ML_H2 = [
 ];
 const SERIES_STAGES = [
   { id: "software-foundations", number: "01", title: "Software foundations", description: "APIs, data models, caching, queues, concurrency, reliability.", range: [1, 10] },
-  { id: "distributed-systems", number: "02", title: "Distributed systems", description: "Streaming, coordination, multi-tenancy, and multi-region design.", range: [11, 20] },
-  { id: "ml-system-design", number: "03", title: "ML system design", description: "Features, training, serving, ranking, experimentation, and drift.", range: [21, 30] },
+  { id: "distributed-systems", number: "02", title: "Distributed systems", description: "Streaming, coordination, multi-tenancy, and multi-region design.", range: [11, 19] },
+  { id: "ml-system-design", number: "03", title: "ML system design", description: "Interview prerequisites, features, training, serving, ranking, experimentation, and drift.", range: [20, 30] },
   { id: "generative-ai", number: "04", title: "Generative AI", description: "RAG, LLM inference, gateways, agents, and enterprise copilots.", range: [31, 40] },
   { id: "ai-platforms", number: "05", title: "AI platforms", description: "Control planes, evaluation, governance, global serving, and cost.", range: [41, 50] },
 ];
@@ -177,7 +177,7 @@ const loadBlogs = async () => {
     let assetFiles = [];
     const questions = await loadQuestions(blogDirectory, entry.name);
 
-    if (number >= 21 && number <= 30) {
+    if (number >= 20 && number <= 30) {
       const h2 = [...source.matchAll(/^##\s+(.+)$/gm)]
         .map((match) => stripMarkdown(match[1]))
         .filter((heading) => heading !== "Table of Contents");

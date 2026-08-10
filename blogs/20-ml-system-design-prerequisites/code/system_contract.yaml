@@ -1,0 +1,79 @@
+system: example_ml_decision_system
+contract_version: 1
+
+decision:
+  recipient: product_request
+  output: probability_and_reason_codes
+  deadline_ms: 80
+  action_owner: policy_service
+  optimize: expected_product_value
+  guardrails:
+    - safety_violation_rate
+    - unfair_outcome_gap
+    - fallback_rate
+
+requirements:
+  peak_rps: 5800
+  availability_target: "99.95%"
+  max_feature_age_seconds: 300
+  audit_retention_days: 365
+  cost_budget_usd_per_million_decisions: 20
+
+intelligence:
+  entity: request_id
+  observation_time: request_received_at
+  target: outcome_within_horizon
+  horizon_days: 30
+  output_semantics: calibrated_probability
+  baseline: deterministic_rules_plus_logistic_regression
+
+data:
+  decision_event_required_fields:
+    - decision_id
+    - entity_id
+    - occurred_at
+    - evidence_version
+    - model_version
+    - policy_version
+    - action
+  join_rule: point_in_time_only
+  label_maturity_days: 35
+  replay_key: decision_id
+
+serving:
+  mode: online
+  deadline_propagation: true
+  model_loading: preload_immutable_bundle
+  overload_policy: reject_optional_feature_reads_first
+  fallback_ladder:
+    - full_decision
+    - cached_or_default_optional_features
+    - smaller_model
+    - known_safe_baseline
+    - stop_or_human_review
+
+release:
+  gates:
+    - offline_temporal_and_slice_evaluation
+    - historical_replay
+    - shadow_traffic
+    - canary_with_product_guardrails
+  rollback_unit: model_feature_policy_bundle
+  rollback_target: last_known_good_compatible_bundle
+
+observability:
+  software:
+    - p99_latency_ms
+    - error_rate
+    - saturation
+  data:
+    - schema_failures
+    - feature_freshness_seconds
+    - training_serving_parity
+  decision:
+    - calibration_error
+    - slice_quality
+    - fallback_rate
+  business:
+    - product_outcome
+    - guardrail_violations
