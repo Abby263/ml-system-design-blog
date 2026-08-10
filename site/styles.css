@@ -371,6 +371,20 @@ main { overflow: clip; }
 .prose a { text-decoration: underline; text-decoration-color: var(--blue); text-underline-offset: 4px; }
 .prose strong { font-weight: 700; }
 .prose blockquote { margin: 40px 0; padding: 7px 0 7px 27px; border-left: 4px solid var(--blue); font-size: 22px; font-style: italic; }
+.interview-dialogue {
+  margin: 36px 0;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  background: var(--paper-bright);
+  box-shadow: 7px 7px 0 var(--node-shadow);
+  font-family: Inter, ui-sans-serif, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+}
+.interview-dialogue p { margin: 0; }
+.interview-dialogue p + p { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line); }
+.interview-dialogue strong { display: inline-block; min-width: 92px; margin-right: 8px; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .prose pre { margin: 35px 0; padding: 26px; overflow-x: auto; color: var(--code-ink); background: var(--code); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.7; }
 .prose code { padding: .15em .35em; background: var(--inline-code); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82em; }
 .prose pre code { padding: 0; color: inherit; background: transparent; font-size: inherit; }
@@ -635,6 +649,8 @@ main { overflow: clip; }
   .prose h2 { margin-top: 62px; overflow-wrap: anywhere; font-size: 32px; }
   .prose h3 { margin-top: 44px; overflow-wrap: anywhere; font-size: 25px; }
   .prose p { margin-bottom: 24px; }
+  .interview-dialogue { margin: 30px -1px; padding: 18px 16px; box-shadow: 5px 5px 0 var(--node-shadow); }
+  .interview-dialogue strong { display: block; min-width: 0; margin: 0 0 4px; }
   .section-check { margin: 46px -1px 58px; padding: 20px 16px; box-shadow: 6px 6px 0 var(--node-shadow); }
   .section-check legend { font-size: 19px; }
   .quiz-option { grid-template-columns: 32px minmax(0, 1fr) 22px; padding-inline: 10px; gap: 9px; }

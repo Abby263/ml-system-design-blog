@@ -2,9 +2,71 @@
 
 *A fraud model predicts risk. A fraud system must turn incomplete evidence into an auditable action before the payment deadline, preserve fresh state under retries and races, learn from labels that arrive weeks later, and remain safe while attackers actively probe it.*
 
-A customer presses **Pay** on a $900 order. The payment service has a few hundred milliseconds to answer. The card has never appeared at this merchant, the account is two hours old, and three low-value attempts from the same device just failed. Blocking a stolen card prevents loss. Blocking a legitimate customer loses the order, damages trust, and may teach the customer to shop elsewhere. Sending every ambiguous payment to a human would be accurate and economically impossible.
+We will treat this as a live system-design interview. We begin with an ambiguous prompt, write down assumptions, estimate only the numbers that influence architecture, and draw the smallest plausible system. New components appear only when a requirement or measured failure breaks the previous design. When a technical term first matters, we define it before using it as architectural shorthand.
 
-This is not simply binary classification. The useful output is one of four interventions:
+## Table of Contents
+
+- Start with the interview prompt
+- Clarify the business decision and requirements
+- Define the intelligence problem
+- Set success metrics before model metrics
+- Estimate scale and the critical path
+- HLD V0: rules plus a tabular model
+- Design the event and decision contracts
+- Build labels without pretending every decline is fraud
+- Evaluate chronologically under extreme imbalance
+- Engineer features by freshness and attack cost
+- Integrate external intelligence without putting vendors on checkout
+- Choose the first model deliberately
+- Put policy after prediction
+- HLD V1: add streaming state and separate the decision plane
+- Make velocity features correct under retries and races
+- Add graph evidence without putting graph traversal on checkout
+- Use analysts as a scarce labeling instrument
+- Train, promote, shadow, and roll back safely
+- Survive missing features, model failure, and regional loss
+- HLD V2: build a global, multi-tenant risk platform
+- Map the design to AWS and Google Cloud
+- Keep the LLD contracts auditable
+- Monitor adversaries, operations, and business harm together
+- Protect privacy and measure uneven harm
+- Run the companion implementation
+- What worked, what failed, and when to evolve
+- How I would summarize this in the last two minutes
+- Interview follow-ups
+- References
+- What comes next
+
+## Start With the Interview Prompt
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Design a real-time fraud-detection system for a global payment platform.</p>
+  <p><strong>Candidate</strong> Before I draw components or choose a model, I want to clarify the decision we are making, who is affected, which actions are available, and how quickly the answer is needed.</p>
+</aside>
+
+That one sentence is intentionally ambiguous. “Fraud” could mean stolen-card payments, account takeover, promo abuse, fake merchants, money laundering, card testing, or coordinated fraud rings. These problems have different prediction units, labels, deadlines, and legal obligations. Jumping directly to Kafka, a feature store, or a neural network would hide those choices rather than answer them.
+
+Our first whiteboard therefore contains only the unresolved decision:
+
+```text
+Payment attempt
+      |
+      v
+Fraud decision system
+      |
+      v
+Action — still to be defined
+```
+
+## Clarify the Business Decision and Requirements
+
+### Business statement
+
+Our primary surface is a card-not-present payment authorization for an e-commerce marketplace. The unit of prediction is a payment attempt. The risk service may use account, card-token, device, IP, merchant, session, and network evidence. It must return an action before the payment orchestrator calls or completes authorization.
+
+A customer presses **Pay** on a $900 order. The card has never appeared at this merchant, the account is two hours old, and three small attempts from the same device just failed. Blocking a stolen card prevents loss; blocking a legitimate customer loses the sale and damages trust. The business decision is therefore not “fraud or not fraud?” It is “which intervention has the lowest expected harm given what we know before the deadline?”
+
+The available actions are:
 
 ```text
 ALLOW       accept with no extra friction
@@ -13,72 +75,85 @@ REVIEW      hold fulfillment and create an analyst case
 BLOCK       reject immediately
 ```
 
-We will build the platform in three scenarios. Scenario 1 ships rules plus a gradient-boosted model inside a modular risk service. Scenario 2 adds event-time streaming features, a dedicated decision plane, delayed-label learning, and graph signals. Scenario 3 becomes a multi-region risk platform with tenant policies, regional state, safe model delivery, and explicit outage behavior. Each step begins with a measured failure of the previous one.
+### Functional requirements
 
-<figure class="technical-figure wide-figure">
-  <a href="assets/checkout-decision-timeline.svg" target="_blank" rel="noreferrer"><img src="assets/checkout-decision-timeline.svg" alt="Checkout authorization timeline showing request validation, parallel feature retrieval and rules, model scoring, policy decision, and asynchronous learning"></a>
-  <figcaption>The synchronous path ends at an action, not a probability; logging and learning continue asynchronously after the customer receives an answer.</figcaption>
-</figure>
+- evaluate every eligible payment attempt;
+- return one deterministic action plus stable reason codes;
+- combine hard controls, historical behavior, and learned risk;
+- support challenge and capacity-bounded human review;
+- preserve the exact evidence and versions behind a decision;
+- capture authorization, challenge, dispute, appeal, and analyst outcomes for learning.
 
-## Table of Contents
+### Non-functional requirements
 
-- Clarify the fraud surface and action deadline
-- Optimize expected loss, not accuracy
-- Size the synchronous path
-- Scenario 1: rules plus a tabular model
-- Design the event and decision contracts
-- Build labels without pretending every decline is fraud
-- Evaluate chronologically under extreme imbalance
-- Engineer features by freshness and attack cost
-- Integrate external intelligence without putting vendors on checkout
-- Choose the first model deliberately
-- Put policy after prediction
-- Scenario 2: add streaming state and separate the decision plane
-- Make velocity features correct under retries and races
-- Add graph evidence without putting graph traversal on checkout
-- Use analysts as a scarce labeling instrument
-- Train, promote, shadow, and roll back safely
-- Survive missing features, model failure, and regional loss
-- Scenario 3: build a global, multi-tenant risk platform
-- Map the design to AWS and Google Cloud
-- Keep the LLD contracts auditable
-- Monitor adversaries, operations, and business harm together
-- Protect privacy and measure uneven harm
-- Run the companion implementation
-- What worked, what failed, and when to evolve
-- Interview follow-ups
-- References
-- What comes next
+| Constraint | Initial target | Architectural consequence |
+|---|---:|---|
+| Risk-decision latency | p99 below 80 ms | Bounded local/parallel dependencies only |
+| Peak throughput | About 21,000 attempts/s | Stateless horizontal serving and partitioned state |
+| Availability | 99.99% target | Tested degraded policies and regional isolation |
+| Feature freshness | Velocity reflected within 5 seconds | Event-time streaming for recent behavior |
+| Retry correctness | Same logical request, same decision | Idempotency key plus canonical request hash |
+| Auditability | Reproduce every acknowledged decision | Immutable decision ledger and versioned artifacts |
+| Geography | Global with residency constraints | Regional cells and selective evidence replication |
 
-## Clarify the Fraud Surface and Action Deadline
+**Idempotency** means that repeating the same logical request has the same externally visible effect as processing it once. Here, a retry with the same key and body returns the original decision and does not increment velocity counters again.
 
-“Fraud detection” can mean stolen-card payments, account takeover, promo abuse, fake merchants, money laundering, card testing, or coordinated fraud rings. They have different units of prediction, labels, action latency, and legal obligations. A useful design begins by choosing one.
-
-Our primary surface is a card-not-present payment authorization for an e-commerce marketplace. The unit of prediction is a payment attempt. The risk service may use account, card-token, device, IP, merchant, session, and network evidence. It must return an action before the payment orchestrator calls or completes authorization.
-
-We also keep two related paths:
+We also keep two related workflows:
 
 - an asynchronous post-authorization detector can use heavier graph and sequence computation to stop fulfillment or freeze an account;
 - an investigation path groups related transactions and entities into cases for analysts.
 
-Those are not interchangeable with the synchronous path. A ten-second graph query may be valuable before a physical order ships, but it cannot sit inside a 100 ms risk budget. An AML alert may tolerate minutes or hours and require a different label and workflow entirely.
+**Synchronous** work is work the caller waits for before receiving its answer. **Asynchronous** work is durably recorded and completed later without keeping that request open. A ten-second graph query may help stop shipment asynchronously, but it cannot sit on the synchronous authorization path.
 
-The initial requirements are:
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> If asynchronous work happens later, how do you know it will not be lost?</p>
+  <p><strong>Candidate</strong> “Asynchronous” does not mean fire-and-forget. The synchronous path commits an event to a durable outbox or log before relying on downstream workers. Workers may retry, so consumers also need stable event IDs and idempotent state changes.</p>
+</aside>
 
-- score every payment attempt and return a deterministic decision;
-- p99 risk-decision latency below 80 ms within a larger checkout budget;
-- reflect burst behavior in velocity features within five seconds;
-- do not count an idempotent retry as another payment attempt;
-- return the same decision for the same idempotency key and request body;
-- retain the exact feature, rule, model, and policy versions behind each action;
-- operate safely when streaming features, the model runtime, or a region is unavailable;
-- support delayed chargebacks, fast analyst labels, appeals, and label corrections.
+These assumptions deliberately exclude AML case generation and broad account-takeover investigation from the 80 ms contract. They may share evidence and infrastructure, but they need separate APIs, labels, policies, and service-level objectives.
 
-We assume 300 million attempts per day. That is about 3,472 requests per second on average. A six-times peak gives roughly 21,000 requests per second. At 2 KB of normalized event data per attempt, the event stream receives about 600 GB per day before replication and indexing. A 180-day lake is therefore on the order of 108 TB raw. These are planning assumptions for this design, not reported numbers from a named company.
+## Define the Intelligence Problem
 
-## Optimize Expected Loss, Not Accuracy
+The model's job and the system's job are related but different:
+
+```text
+transaction + account + device + recent behavior + network context
+                              |
+                              v
+                      fraud-risk model
+                              |
+                              v
+                  calibrated fraud probability
+                              |
+                              v
+              deterministic decision policy
+                              |
+                 +------------+-----------+
+                 |            |           |
+              ALLOW       CHALLENGE    REVIEW / BLOCK
+```
+
+This is a supervised learning problem: historical examples pair evidence available at decision time with later outcomes such as confirmed disputes. The model estimates risk; it does not own the final action. The policy combines that estimate with transaction value, legal controls, challenge availability, merchant preferences, and review capacity.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why not train the model to predict the final action directly?</p>
+  <p><strong>Candidate</strong> Actions change when economics, regulation, or operational capacity changes. Keeping probability estimation separate lets us alter policy without retraining and lets one calibrated model support different merchants or interventions.</p>
+</aside>
+
+## Set Success Metrics Before Model Metrics
 
 If only 0.2% of transactions are fraudulent, a model that predicts “legitimate” every time is 99.8% accurate and useless. ROC-AUC can also look comforting while operational precision is poor in the rare-positive region. We care about decisions at concrete thresholds.
+
+Keep four categories on the whiteboard:
+
+| Category | Primary measures |
+|---|---|
+| Business | Fraud loss plus intervention cost per $1,000 approved; approval and false-decline rates |
+| ML | Precision-recall, recall at an action budget, calibration, temporal and slice performance |
+| System | p50/p95/p99 latency, throughput, availability, feature freshness, cost |
+| Operations | Challenge completion, review yield, queue age, appeal and reversal rates |
+
+**Calibration** asks whether predicted probabilities match observed frequencies. Among mature transactions scored near 0.20, roughly 20% should be fraudulent in the population and slice for which that calibration applies. A well-ranked but poorly calibrated model can still choose economically bad thresholds.
 
 For transaction \(i\), define an expected intervention cost:
 
@@ -111,7 +186,18 @@ Airbnb's published analysis makes the same product point with targeted friction:
 
 The primary product metric is **expected fraud loss plus intervention cost per $1,000 of approved volume**. Guardrails include approval rate, false-decline rate, challenge completion, analyst queue age, chargeback rate, p99 latency, and fairness slices. We also monitor gross fraud dollars prevented, but never without the legitimate volume sacrificed to prevent them.
 
-## Size the Synchronous Path
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why are accuracy and ROC-AUC not enough?</p>
+  <p><strong>Candidate</strong> Fraud is rare and actions are costly. Accuracy rewards predicting “legitimate,” while ROC-AUC averages over thresholds we may never operate at. I need precision and recall near the challenge, review, and block budgets, calibrated probabilities, and the business cost created by each action.</p>
+</aside>
+
+## Estimate Scale and the Critical Path
+
+Assume 300 million attempts per day. That is about 3,472 requests per second on average. A six-times peak gives roughly 21,000 requests per second. At 2 KB of normalized event data per attempt, the canonical event stream receives about 600 GB per day before replication and indexing. A 180-day raw lake is therefore on the order of 108 TB. These are planning assumptions for this design, not reported numbers from a named company.
+
+If the average synchronous operation spends 25 ms waiting on feature I/O, 21,000 peak requests per second imply roughly 525 feature requests in flight before accounting for fan-out, skew, or retries. Ten logical feature reads per payment can produce 210,000 key lookups per second, which argues for batch-get APIs and partition-aware caches rather than ten serial service calls.
+
+**RPS** means requests per second. **p99 latency** is the duration below which 99% of requests complete in a measurement window; the slowest 1% take longer. We budget p99 because payment abandonment and timeouts are driven by the tail, not the average.
 
 A defendable p99 budget for an 80 ms internal risk deadline is:
 
@@ -127,9 +213,19 @@ A defendable p99 budget for an 80 ms internal risk deadline is:
 
 These numbers are a budget, not a promise that sequential RPCs will fit inside it. Independent feature groups run in parallel under child deadlines. The model receives an explicit missingness mask. We do not retry dependencies inside the payment deadline unless the retry budget is proven safe; retries multiply tail latency and can turn a partial outage into a full one.
 
-## Scenario 1: Rules Plus a Tabular Model
+<figure class="technical-figure wide-figure">
+  <a href="assets/checkout-decision-timeline.svg" target="_blank" rel="noreferrer"><img src="assets/checkout-decision-timeline.svg" alt="Checkout authorization timeline showing request validation, parallel feature retrieval and rules, model scoring, policy decision, and asynchronous learning"></a>
+  <figcaption>The solid synchronous path is what checkout waits for. Logging, labels, analytics, and learning continue asynchronously after the action is returned.</figcaption>
+</figure>
 
-At 50 requests per second, start with one deployable risk service, one relational database, a warehouse, and object storage for model bundles. Keep modules separate in code:
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why can the 25 ms feature budget not contain five sequential 5 ms calls?</p>
+  <p><strong>Candidate</strong> Those are nominal numbers, not guaranteed tails. Network and dependency latency compound, and one retry consumes the whole budget. I batch or parallelize independent reads under child deadlines, then cancel or degrade optional groups when the parent deadline approaches.</p>
+</aside>
+
+## HLD V0: Rules Plus a Tabular Model
+
+Before satisfying the global target, test the smallest plausible single-region design. At roughly 50 requests per second, one deployable risk service, one relational database, a warehouse, and object storage for model bundles could ship quickly. HLD V0 is a reasoning baseline, not our claim that it already satisfies the final 21,000-RPS requirement. Keep modules separate in code:
 
 ```text
 API contract
@@ -150,11 +246,34 @@ The first production version can combine:
 - a review queue and delayed-label importer;
 - a daily or twice-daily training job with chronological evaluation.
 
-This works because rules provide immediate coverage for crisp known attacks and legal constraints, while the model learns interactions that become unmaintainable as nested rules. A boosted tree is fast on CPU, handles nonlinear tabular interactions and missing values, and is explainable enough for analysts to inspect reason codes.
+**Tabular data** means rows of typed columns such as amount, account age, country, device tenure, and recent attempt count. A **gradient-boosted decision tree** is an ensemble of small if/then decision trees trained sequentially: each new tree reduces errors left by the current ensemble, and their outputs are added together. “Gradient” refers to optimizing the training loss, not to a neural-network architecture.
+
+This model fits HLD V0 because boosted trees are strong on heterogeneous tabular inputs, capture nonlinear interactions, tolerate explicit missing values, and score quickly on CPU. Logistic regression remains the pipeline and calibration baseline. A deep sequence or graph model is not justified until reliable ordered behavior or relationship evidence produces measured gains over this simpler system.
+
+This works because rules provide immediate coverage for crisp known attacks and legal constraints, while the model learns interactions that become unmaintainable as nested rules. The whiteboard remains deliberately small:
+
+```text
+Payment -> FraudDecisionService -> ALLOW / CHALLENGE / REVIEW / BLOCK
+                    |
+          +---------+----------+
+          |                    |
+       Rules            GBDT risk scorer
+          |                    |
+          +---------+----------+
+                    |
+             Decision policy
+```
 
 What does not work is an ever-growing rule file as the whole system. Attackers split activity just below thresholds, rule interactions become impossible to reason about, and every exception creates another branch. A model-only system also fails: it cannot guarantee a non-negotiable block, encode temporary incident response quickly, or explain what happens when its features disappear.
 
-Keep Scenario 1 until a measured limit appears. A modular monolith is preferable when one team owns the path, all stages share a scaling profile, deploy frequency is modest, and local calls simplify the deadline. Splitting it into six services on day one adds six network and availability boundaries without creating useful organizational or scaling independence.
+Keep HLD V0 while it meets the actual launch SLOs; otherwise use its failure analysis to justify the next version. A modular monolith is preferable when one team owns the path, all stages share a scaling profile, deploy frequency is modest, and local calls simplify the deadline. Splitting it into six services on day one adds six network and availability boundaries without creating useful organizational or scaling independence.
+
+A **modular monolith** is one deployable application with explicit internal module boundaries. It is not one giant class. We keep `FeatureProvider`, `RuleEvaluator`, `RiskScorer`, `DecisionPolicy`, and `DecisionLedger` separable in code while avoiding network calls between them.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why gradient boosting rather than a neural network?</p>
+  <p><strong>Candidate</strong> The current evidence is mostly tabular, labels are limited and delayed, and the deadline favors cheap CPU inference. A neural model becomes credible when sequences, embeddings, or graph structure add repeatable value that survives temporal evaluation—not because it sounds more advanced.</p>
+</aside>
 
 ## Design the Event and Decision Contracts
 
@@ -199,6 +318,13 @@ The response is a decision record, not merely a score:
 ```
 
 The idempotency key is scoped to the caller and compared against a canonical request hash. A retry with the same body returns the original record. Reusing the key with a different body returns a conflict. The decision ledger is append-only; a later analyst label or policy override becomes another linked event rather than rewriting what the system knew at authorization time.
+
+A **transactional outbox** stores the decision and an event-to-publish in the same database transaction. A relay later publishes that outbox row to the stream. This avoids the dual-write failure where checkout commits a decision but crashes before publishing it, or publishes an event for a decision that never committed.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why not write the ledger and Kafka independently?</p>
+  <p><strong>Candidate</strong> There is a crash window between two independent writes. The outbox makes the database commit the source of truth, then an at-least-once relay publishes with a stable event ID. Consumers deduplicate, so retrying publication is safe.</p>
+</aside>
 
 Every decision event records:
 
@@ -369,9 +495,9 @@ Its lifecycle is: author with owner, reason, scope, and expiry; statically valid
 
 Rules and model inference can run concurrently after their required inputs are available. They return evidence—not the final customer action. The deterministic policy resolves legal hard blocks, model risk, challenge availability, merchant policy, and review capacity in one place. Analysts receive stable reason codes and bounded contributing factors; customers receive useful recovery guidance. Neither should receive a raw SHAP dump or exact attack thresholds that turn explanations into an evasion guide.
 
-## Scenario 2: Add Streaming State and Separate the Decision Plane
+## HLD V1: Add Streaming State and Separate the Decision Plane
 
-Scenario 1 eventually fails in recognizable ways:
+HLD V0 eventually fails in recognizable ways:
 
 - database queries for rolling counts create p99 spikes and hot rows;
 - attacks complete before hourly aggregates refresh;
@@ -392,6 +518,8 @@ At roughly 2,000 requests per second with several teams changing risk logic, spl
 8. **Case service** groups alerts, graph context, notes, and labels for analysts.
 
 Do not turn every module into a service automatically. The gateway and policy may remain one deployable unit if they share ownership and latency. The model server deserves separation when model runtimes or scaling differ. Streaming computation is naturally asynchronous. Case management has an entirely different workload. A feature service becomes worthwhile when many models share canonical features and online/offline parity is otherwise failing.
+
+A **decision plane** is the small set of components that must produce the authorization action before the deadline. The **streaming memory plane** consumes events continuously and maintains recent state, but checkout does not wait for an event to traverse that pipeline. The **learning/control plane** builds and distributes versioned feature, model, rule, and policy artifacts; a short control-plane outage must not stop a region from serving its last-known-good bundle.
 
 <figure class="technical-figure wide-figure">
   <a href="assets/risk-decision-planes.svg" target="_blank" rel="noreferrer"><img src="assets/risk-decision-planes.svg" alt="Three-lane fraud platform showing the synchronous decision plane, streaming memory plane, and asynchronous learning and investigation plane"></a>
@@ -415,9 +543,16 @@ Risk gateway -> Payment: action + versions + reason codes
 
 The caller propagates an absolute deadline. Each child call receives a smaller deadline. Optional graph features never delay mandatory feature groups. Results include freshness, not merely values: a card count of zero from a store that has not updated for an hour is different from a fresh zero.
 
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why extract services now if local calls were safer in HLD V0?</p>
+  <p><strong>Candidate</strong> The measured boundaries changed. Streaming has stateful event-time scaling, model runtimes release independently, and case management has a different workload. I still keep synchronous hops few; service extraction is justified by ownership, scaling, runtime, or failure isolation—not by a preference for microservices.</p>
+</aside>
+
 ## Make Velocity Features Correct Under Retries and Races
 
 Velocity features are deceptively stateful. “Attempts by this card in ten minutes” requires decisions about identity, event time, late events, duplicates, window boundaries, and concurrent updates.
+
+**Event time** is when the payment actually occurred; **processing time** is when a streaming worker handled it. A **watermark** is the processor's estimate that most events before a timestamp have arrived, allowing a window to produce a result while still accepting a bounded amount of late data. Without these definitions, two pipelines can both claim to compute “ten-minute attempts” and disagree.
 
 Canonicalize the attempt once and assign `event_id`. The stream processor deduplicates by that ID. The synchronous path does not increment counters and then publish an event without coordination; a retry could increment twice, and a crash could update one side only. Two viable patterns are:
 
@@ -445,6 +580,11 @@ owner: payment-risk
 The same definition drives historical backfill and online computation, or parity tests compare the two implementations on replayed events. Uber has published this batch/near-real-time feature-store pattern, including writing streaming features online and back to the offline store for training.
 
 Hot entities are expected during card testing. Salting can spread write load but complicates reads. A stream processor with partition-local state and periodic materialization often handles hot counters better than direct read-modify-write traffic from every risk request. Apply per-key load shedding and hard caps so one attacked token does not exhaust memory.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why not promise exactly-once processing and stop discussing duplicates?</p>
+  <p><strong>Candidate</strong> A broker guarantee does not cover every database, cache, and external effect end to end. I use stable event identities, atomic state transitions where needed, idempotent consumers, and replay tests. That makes duplicate delivery harmless without relying on a vague global exactly-once claim.</p>
+</aside>
 
 ## Add Graph Evidence Without Putting Graph Traversal on Checkout
 
@@ -533,6 +673,13 @@ Offline gates include:
 
 Shadowing checks predictions, latency, feature availability, and decision disagreement without changing customer outcomes. Because attackers adapt to served actions, a long-running shadow is informative but not equivalent to a live policy. Promote narrowly, cap loss, and monitor fast proxies while waiting for mature chargebacks.
 
+A **shadow release** runs the challenger on live inputs but does not let it change customer actions. A **canary release** lets the challenger affect a small, bounded slice of traffic. Shadowing reveals serving and disagreement problems; a canary is still required to observe intervention effects and rollback safely.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> If the challenger wins offline and in shadow, why not deploy it globally?</p>
+  <p><strong>Candidate</strong> Shadow traffic cannot reveal how customers, issuers, analysts, or attackers respond to changed actions. I canary by a bounded tenant or region, cap exposure, watch fast guardrails, and retain the previous immutable bundle for rollback while mature labels arrive.</p>
+</aside>
+
 Do not automatically retrain and fully deploy merely because drift is detected. Attackers can poison fast feedback. A high-severity drift alert freezes promotion, preserves evidence, and routes to human review. Emergency rules may bridge the gap while a clean dataset and model are prepared.
 
 ## Survive Missing Features, Model Failure, and Regional Loss
@@ -571,9 +718,11 @@ Never silently drop transactions labelled “low risk” when the system is over
 
 Bad records go to a quarantine or dead-letter stream with the schema reason, original event identity, source, and replay lineage. Do not silently coerce an invalid amount, timestamp, or entity identifier into a plausible value. During an alert flood, coalesce cases by entity or fraud ring, suppress duplicate notifications while preserving raw events, apply tenant quotas and value-aware queue priority, and trip a circuit breaker or kill switch when a bad rule or model is amplifying traffic.
 
-## Scenario 3: Build a Global, Multi-Tenant Risk Platform
+## HLD V2: Build a Global, Multi-Tenant Risk Platform
 
 At 20,000 peak decisions per second across regions and many merchants, use regional cells. Global routing sends a payment to its home/nearest healthy region. Each cell contains stateless risk gateways, local feature replicas, model servers, policy cache, and a durable decision log. The cell can decide using a last-known-good bundle without cross-region RPCs.
+
+A **regional cell** is a self-contained slice of the serving data plane with its own compute, low-latency state, decision log, and failure boundary. Losing one cell should not exhaust every other region or require a synchronous call to a global control plane.
 
 Global services manage model/policy registry, feature definitions, training, audit search, and rollout orchestration. They publish immutable artifacts to regional stores. They do not participate synchronously in authorization.
 
@@ -591,6 +740,11 @@ Tenant isolation includes:
 Do not train a bespoke model per small merchant. Sparse labels produce unstable models and an operational explosion. Start with one global model plus merchant/category/context features, calibrate by meaningful segments, and require data/impact thresholds before custom models.
 
 Microservices now make sense where independent ownership, language/runtime, scaling, or failure isolation is measurable. Keep the number of synchronous hops small. A “risk microservice” that calls twelve tiny feature microservices serially is a distributed latency bug.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why not keep one globally consistent feature store?</p>
+  <p><strong>Candidate</strong> It simplifies one mental model but puts WAN latency and a global failure domain on checkout. Most risk evidence tolerates bounded staleness, so I serve local state and replicate compact updates asynchronously. I reserve strong global consistency for a tiny set of controls whose correctness benefit justifies the availability cost.</p>
+</aside>
 
 ### Make recovery objectives testable
 
@@ -772,12 +926,22 @@ Then submit a transaction, retry it with the same idempotency key, and simulate 
 | Stage | What worked | What failed | Trigger to evolve |
 |---|---|---|---|
 | Rules only | Fast response to known attacks; clear controls | Threshold evasion and rule interaction debt | Precision/recall or maintenance becomes unacceptable |
-| Modular rules + boosted trees | Strong tabular baseline, low latency, one-team operation | Database velocities and coupled releases hit scale | Freshness/latency incidents or multiple owners |
-| Streaming features + decision plane | Fresh counters, reusable features, independent model releases | Cross-region signals and graph rings remain delayed | Global traffic, coordinated abuse, tenant isolation |
+| HLD V0: modular rules + boosted trees | Strong tabular baseline, low latency, one-team operation | Database velocities and coupled releases hit scale | Freshness/latency incidents or multiple owners |
+| HLD V1: streaming features + decision plane | Fresh counters, reusable features, independent model releases | Cross-region signals and graph rings remain delayed | Global traffic, coordinated abuse, tenant isolation |
 | Offline graph features | Bounded serving cost and useful relational context | Fast-forming rings may outrun snapshots | Measured early-detection value exceeds complexity |
-| Regional risk cells | Failure isolation and local deadlines | Eventual global evidence and operational cost | Keep unless consistency requirements justify more |
+| HLD V2: regional risk cells | Failure isolation and local deadlines | Eventual global evidence and operational cost | Keep unless consistency requirements justify more |
 
 The mature system is not the one with the most models. It is the one that can answer: what did we know, why did we act, what did that action hide, how did the outcome arrive, and how quickly can we change without giving an attacker or an outage a larger opening?
+
+## How I Would Summarize This in the Last Two Minutes
+
+I would begin with one deterministic fraud-decision service combining versioned hard rules, a calibrated gradient-boosted tree over point-in-time tabular features, and a separate policy that chooses allow, challenge, review, or block. The request is idempotent, the p99 risk budget is 80 ms, and every acknowledged action is linked to its request, feature, rule, model, calibration, and policy versions.
+
+When database-derived velocity becomes stale or creates hot rows, I evolve to HLD V1: a local decision plane reads versioned online features, while a durable stream maintains event-time windows and feeds the offline training lake. Heavy graph computation, analytics, labels, and training stay asynchronous. Models move through chronological evaluation, replay, shadow, canary, and rollback because fraud labels are delayed and the served policy changes what outcomes we can observe.
+
+At global scale, HLD V2 uses regional cells so checkout does not depend on WAN calls or a healthy global control plane. Compact cross-region risk evidence converges asynchronously; only narrowly justified controls require stronger consistency. The largest risks are stale or poisoned evidence, duplicate state changes, false declines, alert floods, and silent loss of audit history, so every dependency has explicit freshness, fallback, ownership, and recovery behavior.
+
+The scaling principle is simple: keep the synchronous path small, keep prediction separate from policy, introduce services only for measured boundaries, and never add a more complex model or global guarantee until evaluation shows that the current design is the limiting factor.
 
 ## Interview Follow-Ups
 

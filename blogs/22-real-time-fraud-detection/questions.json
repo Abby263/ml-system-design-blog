@@ -1,7 +1,20 @@
 {
   "questions": [
     {
-      "sectionId": "clarify-the-fraud-surface-and-action-deadline",
+      "sectionId": "start-with-the-interview-prompt",
+      "prompt": "The interviewer says only, ‘Design a real-time fraud-detection system.’ What is the strongest first response?",
+      "options": [
+        { "text": "Draw Kafka, a feature store, and model serving immediately", "feedback": "Those components may become useful, but the prompt has not established a decision, deadline, scale, or data requirement that justifies them." },
+        { "text": "Clarify the protected decision, available actions, evidence, deadline, and scope before choosing architecture", "feedback": "Correct. Preserving the ambiguity exposes the requirements that should drive every later component." },
+        { "text": "Choose the most accurate fraud model from a benchmark", "feedback": "A benchmark does not define the business action, production evidence, false-positive cost, or latency contract." },
+        { "text": "Assume every fraud workflow shares one global score", "feedback": "Authorization, account takeover, AML, and investigation have different units, labels, actions, and deadlines." }
+      ],
+      "answer": 1,
+      "explanation": "A strong system-design interview begins by turning an ambiguous product phrase into a concrete decision contract. Architecture follows from that contract rather than preceding it.",
+      "followUp": "Which clarification answer would most change your architecture: a 50 ms deadline, a one-hour deadline, or no automated action—and why?"
+    },
+    {
+      "sectionId": "clarify-the-business-decision-and-requirements",
       "prompt": "A payment team asks for a fraud model but mixes checkout authorization, account takeover investigation, and weekly merchant review. What should you clarify first?",
       "options": [
         { "text": "Use one score and one latency target for every workflow", "feedback": "These workflows have different entities, actions, labels, and decision deadlines; forcing one contract hides those differences." },
@@ -14,7 +27,20 @@
       "followUp": "Which signals would you allow for a 100 ms authorization decision but reserve for a ten-minute analyst investigation?"
     },
     {
-      "sectionId": "optimize-expected-loss-not-accuracy",
+      "sectionId": "define-the-intelligence-problem",
+      "prompt": "The fraud model emits a calibrated probability, while regulation and review capacity change frequently. What should own the final customer action?",
+      "options": [
+        { "text": "The model should directly encode every merchant action and operational constraint", "feedback": "That couples risk estimation to rapidly changing policy and forces retraining for non-statistical changes." },
+        { "text": "A versioned deterministic policy should combine model risk with rules, costs, available interventions, and capacity", "feedback": "Correct. Prediction estimates risk; policy resolves what the system should do under current constraints." },
+        { "text": "The online feature store should choose the action while returning features", "feedback": "Feature retrieval should not hide business policy or action severity inside the data layer." },
+        { "text": "The payment client should invent its own thresholds", "feedback": "Distributed caller thresholds create inconsistent actions, weak auditability, and uncontrolled policy drift." }
+      ],
+      "answer": 1,
+      "explanation": "Separating intelligence from policy lets one calibrated risk estimate support different amounts, merchants, regulations, interventions, and operational capacities without retraining the model.",
+      "followUp": "Which decisions must remain hard rules even if the model assigns a very low fraud probability?"
+    },
+    {
+      "sectionId": "set-success-metrics-before-model-metrics",
       "prompt": "Two transactions both receive a 0.8 fraud probability: one is $8 and the other is $8,000. Should the policy necessarily take the same action?",
       "options": [
         { "text": "Yes, because calibrated probabilities map to one universal threshold", "feedback": "A probability alone omits transaction value, recovery, customer friction, and review capacity." },
@@ -27,7 +53,7 @@
       "followUp": "How would you incorporate a limited manual-review budget into the action policy?"
     },
     {
-      "sectionId": "size-the-synchronous-path",
+      "sectionId": "estimate-scale-and-the-critical-path",
       "prompt": "The authorization service has a 150 ms p99 budget and needs device, velocity, and account signals. How should dependencies be called?",
       "options": [
         { "text": "Call them sequentially and retry each one until it succeeds", "feedback": "Sequential calls consume the deadline, and retries can amplify an outage into a retry storm." },
@@ -40,7 +66,7 @@
       "followUp": "If the device signal consumes 90 ms at p99, would you optimize it, cache it, or remove it from the critical path?"
     },
     {
-      "sectionId": "scenario-1-rules-plus-a-tabular-model",
+      "sectionId": "hld-v0-rules-plus-a-tabular-model",
       "prompt": "A small marketplace has useful transaction tables, known abuse patterns, and only weeks to ship. What is the strongest first production design?",
       "options": [
         { "text": "Only hard-coded rules, because learned models cannot be explained", "feedback": "Rules are useful for known invariants but become brittle and miss nonlinear combinations across signals." },
@@ -144,7 +170,7 @@
       "followUp": "How would the policy adapt automatically when the analyst queue is near capacity?"
     },
     {
-      "sectionId": "scenario-2-add-streaming-state-and-separate-the-decision-plane",
+      "sectionId": "hld-v1-add-streaming-state-and-separate-the-decision-plane",
       "prompt": "Fraudsters now burst through many accounts within minutes, and batch aggregates are six hours stale. Which evolution directly addresses the measured gap?",
       "options": [
         { "text": "Retrain the same model every hour on the stale feature table", "feedback": "More frequent training cannot create state that is missing at decision time." },
@@ -222,7 +248,7 @@
       "followUp": "Which transactions would you fail open, step up, or fail closed during a 15-minute regional feature outage?"
     },
     {
-      "sectionId": "scenario-3-build-a-global-multi-tenant-risk-platform",
+      "sectionId": "hld-v2-build-a-global-multi-tenant-risk-platform",
       "prompt": "A global fraud platform serves many merchants, and one tenant's traffic spike threatens every other tenant. Which design best limits the blast radius?",
       "options": [
         { "text": "One global queue and one shared state partition for maximum utilization", "feedback": "A noisy tenant can exhaust shared capacity and create a global failure domain." },

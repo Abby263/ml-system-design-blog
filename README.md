@@ -22,6 +22,8 @@ blogs/
 
 Prefer SVG for technical diagrams so labels remain sharp, searchable, and editable. For implementation-heavy posts, the `code/` directory should include the runnable service, tests, deployment files, load-test scripts, and any local setup instructions needed for that post.
 
+ML system-design articles follow the reusable **[interview and blog template](docs/ml-system-design-interview-template.md)**. It defines the required interview sequence, HLD evolution, first-use terminology rules, interviewer probes, diagram choices, conceptual knowledge checks, and publication checklist.
+
 ## Run the website locally
 
 ```bash
