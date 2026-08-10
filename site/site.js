@@ -1,5 +1,6 @@
 const menuButton = document.querySelector("[data-menu-button]");
 const mobileMenu = document.querySelector("[data-mobile-menu]");
+const mobileToc = document.querySelector("[data-mobile-toc]");
 
 const closeMenu = () => {
   menuButton?.setAttribute("aria-expanded", "false");
@@ -17,7 +18,71 @@ menuButton?.addEventListener("click", () => {
 mobileMenu?.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMenu();
+  if (event.key === "Escape" && mobileToc?.open) mobileToc.open = false;
 });
+
+const mobileTocLinks = [...(mobileToc?.querySelectorAll("a[href^='#']") ?? [])];
+const mobileTocCurrent = mobileToc?.querySelector("[data-mobile-toc-current]");
+const mobileTocNav = mobileToc?.querySelector("nav");
+const mobileTocViewport = window.matchMedia("(max-width: 1050px)");
+const mobileTocTargets = mobileTocLinks
+  .map((link) => ({ link, target: document.querySelector(link.getAttribute("href")) }))
+  .filter(({ target }) => target);
+
+const setCurrentSection = (activeLink) => {
+  mobileTocLinks.forEach((link) => {
+    if (link === activeLink) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  });
+  if (mobileTocCurrent) mobileTocCurrent.textContent = activeLink.textContent.trim();
+};
+
+mobileTocLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    setCurrentSection(link);
+    if (mobileToc) mobileToc.open = false;
+  });
+});
+
+mobileToc?.addEventListener("toggle", () => {
+  if (!mobileToc.open || !mobileTocNav) return;
+  const activeLink = mobileTocNav.querySelector("[aria-current='location']");
+  if (!activeLink) return;
+
+  const linkTop = activeLink.offsetTop - mobileTocNav.offsetTop;
+  mobileTocNav.scrollTop = linkTop - (mobileTocNav.clientHeight - activeLink.offsetHeight) / 2;
+});
+
+if (mobileTocTargets.length) {
+  let sectionTicking = false;
+  const updateCurrentSection = () => {
+    if (!mobileTocViewport.matches) {
+      sectionTicking = false;
+      return;
+    }
+
+    const activationLine = 132;
+    let current = mobileTocTargets[0];
+
+    for (const candidate of mobileTocTargets) {
+      if (candidate.target.getBoundingClientRect().top > activationLine) break;
+      current = candidate;
+    }
+
+    setCurrentSection(current.link);
+    sectionTicking = false;
+  };
+
+  const requestSectionUpdate = () => {
+    if (sectionTicking) return;
+    sectionTicking = true;
+    requestAnimationFrame(updateCurrentSection);
+  };
+
+  updateCurrentSection();
+  document.addEventListener("scroll", requestSectionUpdate, { passive: true });
+  mobileTocViewport.addEventListener?.("change", requestSectionUpdate);
+}
 
 const themeButtons = document.querySelectorAll("[data-theme-toggle]");
 const themeColor = document.querySelector("[data-theme-color]");

@@ -381,6 +381,7 @@ const articlePage = (blog, previous, next) => {
     .filter((heading) => heading.level === 2)
     .map((heading) => `<a href="#${heading.id}">${escapeHtml(heading.text)}</a>`)
     .join("");
+  const mobileToc = `<a href="#article-start">Article introduction</a>${toc}`;
 
   return page({
     title: `${blog.title} — ${SITE_NAME}`,
@@ -389,12 +390,20 @@ const articlePage = (blog, previous, next) => {
     article: true,
     body: `
       <article class="article-shell shell">
-        <header class="article-hero">
+        <header class="article-hero" id="article-start">
           <div class="breadcrumbs"><a href="/blogs/">Writing</a><span>/</span><span>Essay ${String(blog.number).padStart(2, "0")}</span></div>
           <h1>${escapeHtml(blog.shortTitle)}</h1>
           <p>${escapeHtml(blog.subtitle)}</p>
           <div class="article-meta"><span>${blog.readTime} min read</span><span>${blog.codeFiles.length} companion ${blog.codeFiles.length === 1 ? "file" : "files"}</span><a href="${sourceUrl}" target="_blank" rel="noreferrer">Edit on GitHub ↗</a></div>
         </header>
+        <details class="mobile-toc" data-mobile-toc>
+          <summary>
+            <span class="mobile-toc-kicker">On this page</span>
+            <strong data-mobile-toc-current>Article introduction</strong>
+            <span class="mobile-toc-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <nav aria-label="Article sections">${mobileToc}</nav>
+        </details>
         <div class="article-layout">
           <aside class="article-toc"><p>On this page</p>${toc}</aside>
           <div class="article-content prose">${renderMarkdown(content)}</div>
