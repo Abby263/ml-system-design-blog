@@ -27,6 +27,7 @@
   --icon: #314a9b;
   --icon-surface: #e7eaf5;
   --icon-border: rgba(49, 74, 155, 0.42);
+  --on-acid: #11120f;
   --max: 1280px;
 }
 
@@ -57,6 +58,7 @@
   --icon: #ddff76;
   --icon-surface: #24291d;
   --icon-border: rgba(221, 255, 118, 0.56);
+  --on-acid: #11120f;
 }
 
 * { box-sizing: border-box; }
@@ -128,7 +130,7 @@ main { overflow: clip; }
   place-items: center;
   width: 46px;
   height: 32px;
-  color: var(--ink);
+  color: var(--on-acid);
   background: var(--acid);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
@@ -149,9 +151,9 @@ main { overflow: clip; }
   transition: transform 160ms ease;
 }
 .desktop-nav a:hover::after, .desktop-nav a[aria-current="page"]::after { transform: scaleX(1); }
-.desktop-nav .nav-source { height: 40px; padding: 0 17px; color: var(--on-inverse); background: var(--inverse); }
+.desktop-nav .nav-source { display: inline-flex; align-items: center; height: 40px; padding: 0 17px; color: var(--on-inverse); background: var(--inverse); }
 .desktop-nav .nav-source::after { display: none; }
-.desktop-nav .nav-source span { margin-left: 10px; color: var(--acid); }
+.desktop-nav .nav-source span { display: inline-flex; align-items: center; margin-left: 10px; color: var(--acid); }
 .theme-toggle {
   display: inline-flex;
   align-items: center;
