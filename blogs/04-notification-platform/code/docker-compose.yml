@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    environment:
+      DATABASE_PATH: /data/notifications.db
+      CALLBACK_SECRET: local-development-secret
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    volumes:
+      - notification-data:/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  worker:
+    build: .
+    environment:
+      DATABASE_PATH: /data/notifications.db
+      CALLBACK_SECRET: local-development-secret
+    command: ["notification-worker"]
+    volumes:
+      - notification-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  notification-data:

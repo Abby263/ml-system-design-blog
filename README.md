@@ -39,6 +39,7 @@ The production build is written to `dist/` and contains only static assets.
 | 01 | [Designing ML Systems: Introduction](blogs/01-introduction/) | No executable code for the intro |
 | 02 | [Designing a URL Shortener: From One Table to a Global Redirect Plane](blogs/02-url-shortener/) | [FastAPI, PostgreSQL, Redis, worker, tests, and load test](blogs/02-url-shortener/code/) |
 | 03 | [Designing a Distributed Rate Limiter: Correct Quotas Across Many Servers](blogs/03-distributed-rate-limiter/) | [FastAPI, Redis Lua token bucket, tests, and load test](blogs/03-distributed-rate-limiter/code/) |
+| 04 | [Designing a Notification Platform: Durable Intent, At-Least-Once Delivery, and Provider Reality](blogs/04-notification-platform/) | [FastAPI, transactional outbox, leased worker, provider adapters, callbacks, and tests](blogs/04-notification-platform/code/) |
 
 ## Planned direction
 
