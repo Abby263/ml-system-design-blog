@@ -30,6 +30,7 @@ We will build the platform in three scenarios. Scenario 1 ships rules plus a gra
 - Build labels without pretending every decline is fraud
 - Evaluate chronologically under extreme imbalance
 - Engineer features by freshness and attack cost
+- Integrate external intelligence without putting vendors on checkout
 - Choose the first model deliberately
 - Put policy after prediction
 - Scenario 2: add streaming state and separate the decision plane
@@ -292,6 +293,25 @@ features = {
 
 Values must be computed **as of the decision event time** for training and serving. A training join that uses a chargeback filed later, a lifetime count observed after the payment, or a graph snapshot containing future edges is leakage.
 
+## Integrate External Intelligence Without Putting Vendors on Checkout
+
+Fraud decisions often need evidence that the platform did not create: sanctions and regulatory lists, compromised-instrument feeds, GeoIP and proxy intelligence, device reputation, issuer advisories, and merchant consortium signals. The unsafe design is to call each provider while the customer waits. One slow vendor then consumes the checkout deadline, one outage becomes a payment outage, and the same request can observe inconsistent vendor answers across retries.
+
+Ingest these feeds asynchronously. A connector fetches or receives a candidate release, validates its schema and expected population, verifies signatures or checksums, and records provenance. Only a validated snapshot enters a versioned registry. Regional jobs materialize compact lookups into the feature cache used by checkout. Every snapshot carries at least `source`, `version`, `published_at`, `effective_at`, `expires_at`, checksum, schema version, and regional delivery status. The feature response carries both the value and its age.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/external-intelligence-decision-fusion.svg" target="_blank" rel="noreferrer"><img src="assets/external-intelligence-decision-fusion.svg" alt="External intelligence ingestion and fraud decision fusion showing vendors outside the checkout boundary, validated versioned snapshots, regional caches, parallel rules and model scoring, deterministic policy, and asynchronous audit analytics"></a>
+  <figcaption>External providers update validated regional snapshots asynchronously. Checkout reads local evidence; it never waits for a sanctions, reputation, GeoIP, or compromised-instrument vendor.</figcaption>
+</figure>
+
+Not every feed has the same failure semantics:
+
+- **Legal or contractual hard controls** use the last validated snapshot only within an approved maximum age. Past that age, a documented jurisdiction- and product-specific fail policy decides whether to stop, hold, or route the payment; the model is not allowed to override it.
+- **Soft reputation signals** become stale or missing features. The model receives missingness and source-age metadata, and policy applies a fallback that was evaluated under simulated feed loss.
+- **Malformed or suspicious releases** are quarantined. A signature failure, impossible schema change, unexpected population collapse, or large unexplained distribution shift never replaces the last-known-good snapshot automatically.
+
+This design trades a small, measurable propagation delay for bounded latency and fault isolation. For a genuinely urgent compromised-token revocation, use a separate signed push channel into regional caches with monotonic versions and acknowledgement—not an unbounded request-time dependency. Monitor provider freshness, validation failures, regional replication lag, match rate, and marginal decision value; a prestigious feed that is stale, redundant, or noisy should not survive on reputation alone.
+
 ## Choose the First Model Deliberately
 
 Start with logistic regression as a calibration and pipeline baseline, then a gradient-boosted tree model. The linear model exposes sign errors and leakage quickly. The tree model usually captures useful interactions among sparse, tabular, nonlinear risk signals at low CPU latency.
@@ -331,6 +351,23 @@ else:
 Real policies also include amount-dependent thresholds, issuer/network rules, region, merchant risk appetite, inventory type, fulfillment reversibility, customer segment, and current incident overrides. Keep the policy deterministic, versioned, testable, and explainable. Do not bury it in model postprocessing code.
 
 Threshold changes can have larger business impact than model changes. Test them against replay data, queue-capacity simulations, and shadow traffic. Require dual control for emergency rules with broad blast radius. Every rule needs owner, reason, creation/expiry time, affected scope, and observed match/precision metrics; temporary incident rules that never expire are technical debt with customer impact.
+
+### Operate rules like production code
+
+A rule should be a versioned artifact with an explicit blast radius, not an anonymous line in a mutable configuration file:
+
+```text
+RULE card_testing_v17
+WHEN card_attempts_10m >= 8
+  AND distinct_accounts_per_device_1h >= 4
+THEN challenge
+SCOPE merchant_group = "digital_goods"
+EXPIRES 2026-08-17T00:00:00Z
+```
+
+Its lifecycle is: author with owner, reason, scope, and expiry; statically validate fields and types; reject unsafe complexity or fan-out; replay on historical traffic; dry-run or shadow on live traffic; canary by tenant or region; activate; monitor match rate, precision, false declines, and queue impact; then auto-expire or remove it with a kill switch. A rule compiler can represent conditions as an abstract syntax tree, but the important contract is deterministic evaluation against a pinned rule-set version.
+
+Rules and model inference can run concurrently after their required inputs are available. They return evidence—not the final customer action. The deterministic policy resolves legal hard blocks, model risk, challenge availability, merchant policy, and review capacity in one place. Analysts receive stable reason codes and bounded contributing factors; customers receive useful recovery guidance. Neither should receive a raw SHAP dump or exact attack thresholds that turn explanations into an evasion guide.
 
 ## Scenario 2: Add Streaming State and Separate the Decision Plane
 
@@ -507,8 +544,12 @@ Design degradation before the first outage:
 | One optional feature group times out | Missingness-aware model | Slight threshold adjustment if validated |
 | Streaming counters stale | Batch history + rules | Challenge risky new/high-value traffic |
 | Graph snapshot missing | Tabular model | No severe action based on absent graph evidence |
+| External intelligence stale or corrupt | Last validated snapshot within its max age; otherwise explicit feed policy | Enforce hard-control policy; mark soft signals missing |
+| Malformed request or profile | Versioned schema validation + quarantine | Return a typed client error; never invent identity fields |
 | Model server unavailable | Deterministic rules + cached baseline | Allow known-low-risk; challenge/review bounded risk |
-| Decision ledger slow | Local durable outbox or strict fail policy | Never return unaudited block silently |
+| Stream lag or backpressure | Last complete event-time windows + lag metadata | Shed optional enrichment, not authorization records |
+| Rule/model causes an alert flood | Prior bundle + kill switch + case coalescing | Roll back and protect analyst capacity |
+| Decision ledger or primary store unavailable | Local durable outbox or strict fail policy | Do not acknowledge a decision that required durable audit |
 | Review queue saturated | Challenge or amount-aware thresholds | Do not keep routing into a dead queue |
 | Regional feature store lost | Region-local last-known-good snapshots | Tighten only policies proven safe |
 
@@ -525,6 +566,10 @@ ambiguous high value + no challenge/review    -> merchant-specific safe default
 ```
 
 Every degraded decision says `degraded=true`, names unavailable feature groups, records fallback policy, and emits a separate reliability metric. Otherwise a feature outage can look like an unexplained drop in fraud scores.
+
+Never silently drop transactions labelled “low risk” when the system is overloaded. Every request receives a decision or an explicit timeout/error interpreted by the caller's documented policy, and every acknowledged attempt is durably recorded where audit or financial controls require it. Backpressure can postpone analytics and optional enrichment; it cannot make authorization history disappear.
+
+Bad records go to a quarantine or dead-letter stream with the schema reason, original event identity, source, and replay lineage. Do not silently coerce an invalid amount, timestamp, or entity identifier into a plausible value. During an alert flood, coalesce cases by entity or fraud ring, suppress duplicate notifications while preserving raw events, apply tenant quotas and value-aware queue priority, and trip a circuit breaker or kill switch when a bad rule or model is amplifying traffic.
 
 ## Scenario 3: Build a Global, Multi-Tenant Risk Platform
 
@@ -546,6 +591,20 @@ Tenant isolation includes:
 Do not train a bespoke model per small merchant. Sparse labels produce unstable models and an operational explosion. Start with one global model plus merchant/category/context features, calibrate by meaningful segments, and require data/impact thresholds before custom models.
 
 Microservices now make sense where independent ownership, language/runtime, scaling, or failure isolation is measurable. Keep the number of synchronous hops small. A “risk microservice” that calls twelve tiny feature microservices serially is a distributed latency bug.
+
+### Make recovery objectives testable
+
+Recovery targets depend on business loss and regulatory obligations. The following are planning targets for this design, not universal promises:
+
+| Capability | Example RTO | Example RPO | Recovery behavior |
+|---|---:|---:|---|
+| Regional decision serving | About 60 seconds | Not applicable to immutable serving artifacts | Route to a healthy cell or start from the last-known-good bundle |
+| Decision ledger and outbox | Under 5 minutes | Zero for acknowledged decisions | Restore quorum or replay the local durable journal before acknowledgement resumes |
+| Streaming features | Under 15 minutes | At most 5 minutes | Serve marked-stale state, then replay the canonical log and reconcile windows |
+| Cases and analytics | 4 hours | 15 minutes | Rebuild indexes and queues from durable decision and outcome events |
+| Training and control plane | 24 hours | Last promoted immutable bundle | Pause promotion; regional cells continue serving the pinned bundle |
+
+A disaster-recovery drill should evacuate a region, restore the latest verified snapshot, replay the canonical event log from a recorded offset, and verify deduplication by comparing decision IDs, counts, and ledger checksums before failback. It must also prove that residency boundaries survive rerouting: raw events may need to remain in-jurisdiction even when compact risk evidence is replicated. A runbook that has never restored data or exercised regional routing is documentation, not a recovery capability.
 
 ## Map the Design to AWS and Google Cloud
 
@@ -660,6 +719,17 @@ Alert on combinations. A falling fraud rate plus a falling approval rate may mea
 
 Adversarial monitoring adds canary entities, synthetic attack replays, rate-limited red-team traffic, rule probing detection, and survival analysis for newly observed campaigns. Protect exact thresholds and high-value feature logic as sensitive security configuration; explanations to customers should be useful without becoming an evasion manual.
 
+### Keep analytics off the checkout path
+
+```text
+decision ledger + outbox + mature outcomes
+  -> durable event lake
+  -> analytical warehouse / audit index
+  -> fraud trends, policy simulation, analyst ops, compliance exports
+```
+
+The warehouse and search index are asynchronous projections; neither is queried to authorize a payment. Aggregate daily fraud and friction by tenant, region, attack family, action, and model/policy version. Preserve immutable lineage from each report row back to decision and outcome events so policy simulation and compliance exports are reproducible. Isolate ad-hoc queries with separate compute and quotas: an investigator scanning six months of history must not consume stream-processing or decision-serving capacity.
+
 ## Protect Privacy and Measure Uneven Harm
 
 Risk platforms touch payment, device, location, identity, and behavioral data. Minimize collection, tokenize payment instruments, separate raw identity from feature access, encrypt data, enforce purpose-bound authorization, audit analyst access, and expire data according to policy and law. Device fingerprinting and cross-merchant network signals require explicit privacy review and region-specific controls.
@@ -754,27 +824,28 @@ Not for this tabular authorization decision unless it provides unique validated 
 3. [Hello Interview: Harmful Content Detection](https://www.hellointerview.com/learn/ml-system-design/problem-breakdowns/harmful-content) — precision guardrails, multi-action intervention, and human review capacity.
 4. [Hello Interview: Feature Engineering](https://www.hellointerview.com/learn/ml-system-design/core-concepts/feature-engineering) — transaction, actor, context, temporal, and network feature framing.
 5. [Hello Interview: Evaluation](https://www.hellointerview.com/learn/ml-system-design/core-concepts/evaluation) — PR-AUC under imbalance, shadowing, slicing, and temporal leakage.
+6. [Bugfree.ai: Design a Real-Time Fraud Detection System](https://medium.com/@bugfreeai/tiktok-mle-system-design-interview-design-a-real-time-fraud-detection-system-749cea63ffa5) — a broad operational checklist covering hybrid rules and models, external feeds, online state, scaling, and failure modes; used here as interview inspiration rather than authority for every implementation choice.
 
 ### Published systems and primary technical sources
 
-6. [Stripe: A Primer on Machine Learning for Fraud Detection](https://stripe.com/blog/a-primer-on-machine-learning-for-fraud-detection) — network-level payment evidence and bank-provided outcomes.
-7. [Stripe: Improved Fraud Prevention with Radar 2.0](https://stripe.com/us/blog/radar-2018) — high-throughput historical signals, daily training, class imbalance, and merchant-specific models.
-8. [Stripe: Dynamic Risk-Based Radar Rules](https://stripe.com/blog/using-ai-dynamic-radar-rules) — combining real-time model scores, issuer evidence, and adaptive intervention.
-9. [Stripe: The ML Flywheel for Card Testing](https://stripe.com/blog/the-ml-flywheel-how-we-continually-improve-our-models-to-reduce-card-testing) — rapid labels, features, retraining, and redeployment against changing attacks.
-10. [Airbnb: Architecting a Machine Learning System for Risk](https://medium.com/airbnb-engineering/architecting-a-machine-learning-system-for-risk-941abbba5a60) — fast scoring, parallel features, asynchronous detection, and agile model delivery.
-11. [Airbnb: Fighting Financial Fraud with Targeted Friction](https://medium.com/airbnb-engineering/fighting-financial-fraud-with-targeted-friction-82d950d8900e) — expected loss, false-positive cost, and challenge versus hard block.
-12. [Airbnb: Graph Machine Learning](https://medium.com/airbnb-engineering/graph-machine-learning-at-airbnb-f868d65f36ee) — offline SIGN embeddings as features for online trust-and-safety models.
-13. [Uber: Michelangelo Machine Learning Platform](https://www.uber.com/in/en/blog/michelangelo-machine-learning-platform/) — batch and near-real-time features, online/offline consistency, and low-latency serving.
-14. [Uber: Palette Feature Store](https://www.uber.com/en-GB/blog/palette-meta-store-journey/) — governed batch/near-real-time features used by fraud and other teams.
-15. [Uber: Risk Entity Watch](https://www.uber.com/us/en/blog/risk-entity-watch/) — anomaly detection, explanation, and human review before consequential action.
-16. [Google Cloud: Fraud Detection with Cloud Bigtable](https://cloud.google.com/blog/products/databases/fraud-detection-with-cloud-bigtable/) — Pub/Sub, Dataflow, low-latency entity history, and Vertex AI inference.
-17. [Google Cloud and WePay: Stream Analytics for Fraud](https://cloud.google.com/blog/products/gcp/how-wepay-uses-stream-analytics-for-real-time-fraud-detection-using-gcp-and-apache-kafka) — multi-window velocity features with Kafka, Dataflow, and Bigtable.
-18. [AWS: Real-Time In-Stream Inference](https://aws.amazon.com/blogs/architecture/realtime-in-stream-inference-kinesis-sagemaker-flink/) — Kinesis, Flink, and SageMaker streaming inference pattern.
-19. [AWS: GNN-Based Real-Time Fraud Detection](https://aws.amazon.com/blogs/machine-learning/build-a-gnn-based-real-time-fraud-detection-solution-using-amazon-sagemaker-amazon-neptune-and-the-deep-graph-library/) — Neptune, DGL, and SageMaker graph-fraud architecture.
-20. [Dal Pozzolo et al.: Credit Card Fraud Detection—A Realistic Modeling and a Novel Learning Strategy](https://doi.org/10.1109/TNNLS.2017.2736643) — concept drift, class imbalance, verification latency, and separate feedback channels.
-21. [Hamilton, Ying, and Leskovec: GraphSAGE](https://proceedings.neurips.cc/paper/2017/hash/5dd9db5e033da9c6fb5ba83c7a7ebea9-Abstract.html) — inductive neighborhood aggregation for unseen graph nodes.
-22. [Lin et al.: Focal Loss](https://arxiv.org/abs/1708.02002) — downweighting abundant easy negatives under extreme imbalance.
-23. [Google Research: LLM-Powered Trust and Safety in Digital Payments](https://research.google/pubs/enhancing-trust-and-safety-in-digital-payments-an-llm-powered-approach/) — LLM-assisted scam classification and review reasoning.
+7. [Stripe: A Primer on Machine Learning for Fraud Detection](https://stripe.com/blog/a-primer-on-machine-learning-for-fraud-detection) — network-level payment evidence and bank-provided outcomes.
+8. [Stripe: Improved Fraud Prevention with Radar 2.0](https://stripe.com/us/blog/radar-2018) — high-throughput historical signals, daily training, class imbalance, and merchant-specific models.
+9. [Stripe: Dynamic Risk-Based Radar Rules](https://stripe.com/blog/using-ai-dynamic-radar-rules) — combining real-time model scores, issuer evidence, and adaptive intervention.
+10. [Stripe: The ML Flywheel for Card Testing](https://stripe.com/blog/the-ml-flywheel-how-we-continually-improve-our-models-to-reduce-card-testing) — rapid labels, features, retraining, and redeployment against changing attacks.
+11. [Airbnb: Architecting a Machine Learning System for Risk](https://medium.com/airbnb-engineering/architecting-a-machine-learning-system-for-risk-941abbba5a60) — fast scoring, parallel features, asynchronous detection, and agile model delivery.
+12. [Airbnb: Fighting Financial Fraud with Targeted Friction](https://medium.com/airbnb-engineering/fighting-financial-fraud-with-targeted-friction-82d950d8900e) — expected loss, false-positive cost, and challenge versus hard block.
+13. [Airbnb: Graph Machine Learning](https://medium.com/airbnb-engineering/graph-machine-learning-at-airbnb-f868d65f36ee) — offline SIGN embeddings as features for online trust-and-safety models.
+14. [Uber: Michelangelo Machine Learning Platform](https://www.uber.com/in/en/blog/michelangelo-machine-learning-platform/) — batch and near-real-time features, online/offline consistency, and low-latency serving.
+15. [Uber: Palette Feature Store](https://www.uber.com/en-GB/blog/palette-meta-store-journey/) — governed batch/near-real-time features used by fraud and other teams.
+16. [Uber: Risk Entity Watch](https://www.uber.com/us/en/blog/risk-entity-watch/) — anomaly detection, explanation, and human review before consequential action.
+17. [Google Cloud: Fraud Detection with Cloud Bigtable](https://cloud.google.com/blog/products/databases/fraud-detection-with-cloud-bigtable/) — Pub/Sub, Dataflow, low-latency entity history, and Vertex AI inference.
+18. [Google Cloud and WePay: Stream Analytics for Fraud](https://cloud.google.com/blog/products/gcp/how-wepay-uses-stream-analytics-for-real-time-fraud-detection-using-gcp-and-apache-kafka) — multi-window velocity features with Kafka, Dataflow, and Bigtable.
+19. [AWS: Real-Time In-Stream Inference](https://aws.amazon.com/blogs/architecture/realtime-in-stream-inference-kinesis-sagemaker-flink/) — Kinesis, Flink, and SageMaker streaming inference pattern.
+20. [AWS: GNN-Based Real-Time Fraud Detection](https://aws.amazon.com/blogs/machine-learning/build-a-gnn-based-real-time-fraud-detection-solution-using-amazon-sagemaker-amazon-neptune-and-the-deep-graph-library/) — Neptune, DGL, and SageMaker graph-fraud architecture.
+21. [Dal Pozzolo et al.: Credit Card Fraud Detection—A Realistic Modeling and a Novel Learning Strategy](https://doi.org/10.1109/TNNLS.2017.2736643) — concept drift, class imbalance, verification latency, and separate feedback channels.
+22. [Hamilton, Ying, and Leskovec: GraphSAGE](https://proceedings.neurips.cc/paper/2017/hash/5dd9db5e033da9c6fb5ba83c7a7ebea9-Abstract.html) — inductive neighborhood aggregation for unseen graph nodes.
+23. [Lin et al.: Focal Loss](https://arxiv.org/abs/1708.02002) — downweighting abundant easy negatives under extreme imbalance.
+24. [Google Research: LLM-Powered Trust and Safety in Digital Payments](https://research.google/pubs/enhancing-trust-and-safety-in-digital-payments-an-llm-powered-approach/) — LLM-assisted scam classification and review reasoning.
 
 ## What Comes Next
 

@@ -105,6 +105,19 @@
       "followUp": "Which feature would you remove first if attackers can cheaply reset it by creating a new account?"
     },
     {
+      "sectionId": "integrate-external-intelligence-without-putting-vendors-on-checkout",
+      "prompt": "A sanctions and device-reputation provider times out during checkout. Which design keeps decisions both fast and defensible?",
+      "options": [
+        { "text": "Retry the provider until it answers because external intelligence must always be current", "feedback": "Unbounded retries consume the payment deadline and turn a provider incident into a checkout outage." },
+        { "text": "Consume feeds asynchronously, verify and version snapshots, then serve them from regional caches with freshness metadata", "feedback": "Correct. Hard controls use a documented last-good or fail policy, while soft signals degrade to explicit stale or missing features." },
+        { "text": "Ignore every external signal whenever any one provider is unavailable", "feedback": "This discards independent useful evidence and gives one provider an unnecessarily large failure radius." },
+        { "text": "Cache the last response forever and hide its age from the model", "feedback": "An unbounded stale value can violate legal policy or mislead the model; age and maximum-validity rules must be explicit." }
+      ],
+      "answer": 1,
+      "explanation": "External intelligence belongs in a governed asynchronous supply chain. Validated immutable snapshots are distributed locally; legal controls and soft model features have different, tested staleness behavior.",
+      "followUp": "How would you quarantine a provider snapshot whose row count suddenly falls by 80% without blocking regional checkout?"
+    },
+    {
       "sectionId": "choose-the-first-model-deliberately",
       "prompt": "You have heterogeneous tabular data, missing values, nonlinear interactions, CPU serving, and limited training history. Which first model is most defensible?",
       "options": [

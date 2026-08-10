@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-labelledby="title desc">
+  <title id="title">External intelligence and real-time fraud decision fusion</title>
+  <desc id="desc">External intelligence is validated and distributed asynchronously into regional caches. Checkout combines local snapshots with internal streaming state, rules, and a model inside a bounded synchronous decision boundary.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0 0L9 3L0 6Z" fill="#171912"/>
+    </marker>
+    <marker id="async-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0 0L9 3L0 6Z" fill="#566fce"/>
+    </marker>
+    <style>
+      .bg{fill:#fafaf5}.ink{fill:#171912}.paper{fill:#f0f0e9}.blue{fill:#92adff}.lime{fill:#d9ff63}.coral{fill:#ffb59d}.white{fill:#fafaf5}
+      .box{stroke:#171912;stroke-width:3}.boundary{fill:none;stroke:#171912;stroke-width:4}.offline{fill:none;stroke:#566fce;stroke-width:3;stroke-dasharray:12 9}
+      .line{fill:none;stroke:#171912;stroke-width:3;marker-end:url(#arrow)}.async{fill:none;stroke:#566fce;stroke-width:3;stroke-dasharray:11 8;marker-end:url(#async-arrow)}
+      .eyebrow{font:700 13px ui-monospace,monospace;letter-spacing:2px;fill:#66695f}.heading{font:700 32px Inter,Arial,sans-serif;fill:#171912}
+      .label{font:800 17px Inter,Arial,sans-serif;fill:#171912}.labelw{font:800 17px Inter,Arial,sans-serif;fill:#fafaf5}
+      .small{font:500 13px Inter,Arial,sans-serif;fill:#50534a}.smallw{font:500 13px Inter,Arial,sans-serif;fill:#fafaf5}
+      .note{font:700 14px ui-monospace,monospace;fill:#3e56ad}.decision{font:800 15px Inter,Arial,sans-serif;fill:#171912}
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1100"/>
+  <text class="eyebrow" x="55" y="48">EVIDENCE SUPPLY CHAIN · LOCAL DECISION FUSION</text>
+  <text class="heading" x="55" y="94">Vendors update checkout; checkout never waits for vendors.</text>
+
+  <rect class="offline" x="55" y="135" width="1490" height="310" rx="14"/>
+  <text class="note" x="80" y="166">ASYNCHRONOUS INTELLIGENCE PLANE · OUTSIDE THE PAYMENT DEADLINE</text>
+
+  <g>
+    <rect class="paper box" x="85" y="205" width="210" height="75" rx="9"/>
+    <text class="label" x="190" y="237" text-anchor="middle">Sanctions / legal</text>
+    <text class="small" x="190" y="260" text-anchor="middle">signed authority lists</text>
+
+    <rect class="paper box" x="85" y="300" width="210" height="75" rx="9"/>
+    <text class="label" x="190" y="332" text-anchor="middle">Threat feeds</text>
+    <text class="small" x="190" y="355" text-anchor="middle">cards · devices · IPs</text>
+
+    <rect class="coral box" x="390" y="225" width="245" height="130" rx="10"/>
+    <text class="label" x="512" y="262" text-anchor="middle">Validate + sign</text>
+    <text class="small" x="512" y="288" text-anchor="middle">schema · checksum · size</text>
+    <text class="small" x="512" y="311" text-anchor="middle">provenance · effective time</text>
+    <text class="small" x="512" y="334" text-anchor="middle">quarantine on anomaly</text>
+
+    <rect class="ink box" x="740" y="225" width="250" height="130" rx="10"/>
+    <text class="labelw" x="865" y="262" text-anchor="middle">Snapshot registry</text>
+    <text class="smallw" x="865" y="288" text-anchor="middle">immutable versions</text>
+    <text class="smallw" x="865" y="311" text-anchor="middle">published · effective · expiry</text>
+    <text class="smallw" x="865" y="334" text-anchor="middle">last validated release</text>
+
+    <rect class="blue box" x="1095" y="225" width="255" height="130" rx="10"/>
+    <text class="label" x="1222" y="262" text-anchor="middle">Regional materializer</text>
+    <text class="small" x="1222" y="288" text-anchor="middle">compact local lookups</text>
+    <text class="small" x="1222" y="311" text-anchor="middle">monotonic delivery</text>
+    <text class="small" x="1222" y="334" text-anchor="middle">freshness + acknowledgements</text>
+  </g>
+
+  <path class="async" d="M295 242H390"/>
+  <path class="async" d="M295 337H390"/>
+  <path class="async" d="M635 290H740"/>
+  <path class="async" d="M990 290H1095"/>
+  <rect class="coral box" x="1385" y="245" width="125" height="90" rx="9"/>
+  <text class="label" x="1447" y="279" text-anchor="middle">Quarantine</text>
+  <text class="small" x="1447" y="303" text-anchor="middle">bad release</text>
+  <path class="async" d="M635 325C690 400 1370 405 1425 335"/>
+
+  <rect class="boundary" x="55" y="500" width="1490" height="420" rx="16"/>
+  <rect class="ink" x="55" y="500" width="1490" height="48" rx="14"/>
+  <text class="smallw" x="80" y="530">SYNCHRONOUS DECISION BOUNDARY · LOCAL DEPENDENCIES · &lt;80 MS P99</text>
+
+  <g>
+    <rect class="paper box" x="90" y="615" width="175" height="105" rx="9"/>
+    <text class="label" x="177" y="655" text-anchor="middle">Payment</text>
+    <text class="small" x="177" y="680" text-anchor="middle">request + deadline</text>
+
+    <rect class="blue box" x="340" y="575" width="235" height="105" rx="9"/>
+    <text class="label" x="457" y="615" text-anchor="middle">Regional feature cache</text>
+    <text class="small" x="457" y="640" text-anchor="middle">snapshot value + age</text>
+    <text class="small" x="457" y="661" text-anchor="middle">last-good / missing state</text>
+
+    <rect class="lime box" x="340" y="745" width="235" height="105" rx="9"/>
+    <text class="label" x="457" y="785" text-anchor="middle">Internal streaming state</text>
+    <text class="small" x="457" y="810" text-anchor="middle">velocity · profile · graph</text>
+    <text class="small" x="457" y="831" text-anchor="middle">event-time freshness</text>
+
+    <rect class="coral box" x="680" y="575" width="200" height="105" rx="9"/>
+    <text class="label" x="780" y="615" text-anchor="middle">Rules</text>
+    <text class="small" x="780" y="640" text-anchor="middle">hard controls</text>
+    <text class="small" x="780" y="661" text-anchor="middle">version + reason</text>
+
+    <rect class="blue box" x="680" y="745" width="200" height="105" rx="9"/>
+    <text class="label" x="780" y="785" text-anchor="middle">Model</text>
+    <text class="small" x="780" y="810" text-anchor="middle">score + missingness</text>
+    <text class="small" x="780" y="831" text-anchor="middle">calibration version</text>
+
+    <rect class="ink box" x="985" y="635" width="225" height="150" rx="10"/>
+    <text class="labelw" x="1097" y="675" text-anchor="middle">Deterministic policy</text>
+    <text class="smallw" x="1097" y="703" text-anchor="middle">legal precedence</text>
+    <text class="smallw" x="1097" y="726" text-anchor="middle">expected cost · capacity</text>
+    <text class="smallw" x="1097" y="749" text-anchor="middle">fallback + reason codes</text>
+
+    <rect class="lime box" x="1310" y="595" width="190" height="230" rx="10"/>
+    <text class="label" x="1405" y="635" text-anchor="middle">Action</text>
+    <text class="decision" x="1405" y="681" text-anchor="middle">ALLOW</text>
+    <text class="decision" x="1405" y="720" text-anchor="middle">CHALLENGE</text>
+    <text class="decision" x="1405" y="759" text-anchor="middle">REVIEW</text>
+    <text class="decision" x="1405" y="798" text-anchor="middle">BLOCK</text>
+  </g>
+
+  <path class="async" d="M1222 355V460H457V575"/>
+  <text class="note" x="995" y="480">VERSIONED SNAPSHOT DELIVERY — NEVER A CHECKOUT RPC</text>
+  <path class="line" d="M265 667H310V627H340"/>
+  <path class="line" d="M265 667H310V797H340"/>
+  <path class="line" d="M575 627H680"/>
+  <path class="line" d="M575 797H680"/>
+  <path class="line" d="M880 627C935 627 935 675 985 675"/>
+  <path class="line" d="M880 797C935 797 935 747 985 747"/>
+  <path class="line" d="M1210 710H1310"/>
+
+  <rect class="paper box" x="225" y="985" width="250" height="76" rx="9"/>
+  <text class="label" x="350" y="1017" text-anchor="middle">Decision ledger + outbox</text>
+  <text class="small" x="350" y="1041" text-anchor="middle">immutable attempt and evidence</text>
+  <rect class="blue box" x="675" y="985" width="250" height="76" rx="9"/>
+  <text class="label" x="800" y="1017" text-anchor="middle">Durable stream / lake</text>
+  <text class="small" x="800" y="1041" text-anchor="middle">replay + mature outcomes</text>
+  <rect class="paper box" x="1125" y="985" width="250" height="76" rx="9"/>
+  <text class="label" x="1250" y="1017" text-anchor="middle">Analytics + audit</text>
+  <text class="small" x="1250" y="1041" text-anchor="middle">never queried by checkout</text>
+  <path class="async" d="M1405 825V955H350V985"/>
+  <path class="async" d="M475 1023H675"/>
+  <path class="async" d="M925 1023H1125"/>
+</svg>
