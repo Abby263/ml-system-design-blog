@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Internal architecture of a multi-task recommendation ranker</title>
+  <desc id="desc">User and session history is encoded once per request. Candidate, context, and dense features are combined in a batched interaction model. Multiple calibrated outcome heads feed a versioned value function and then a slate re-ranker.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:3;marker-end:url(#arrow)}.arroww{fill:none;stroke:#fafaf5;stroke-width:3;marker-end:url(#arroww)}.policy{fill:none;stroke:#4e62a8;stroke-width:3;stroke-dasharray:10 8;marker-end:url(#policy)}.k{font:700 13px ui-monospace,monospace;letter-spacing:1.6px;fill:#777a70}.h{font:700 30px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 17px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 17px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 12px Inter,Arial,sans-serif;fill:#55584f}.sw{font:500 12px Inter,Arial,sans-serif;fill:#c8cbc2}.small{font:700 13px Inter,Arial,sans-serif;fill:#11120f}.tag{font:700 11px ui-monospace,monospace;letter-spacing:1px;fill:#55584f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+    <marker id="arroww" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#fafaf5"/></marker>
+    <marker id="policy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4e62a8"/></marker>
+  </defs>
+
+  <rect class="bg" width="1700" height="1120"/>
+  <text class="k" x="50" y="48">HEAVY RANKER · PREDICT OBSERVABLE OUTCOMES BEFORE APPLYING PRODUCT POLICY</text>
+  <text class="h" x="50" y="96">Encode shared context once; score two hundred candidates as one batch.</text>
+
+  <rect class="group" x="45" y="145" width="330" height="770" rx="6"/>
+  <text class="k" x="70" y="180">INPUT BRANCHES</text>
+
+  <g transform="translate(75 215)">
+    <rect class="blue" width="270" height="150" rx="5"/>
+    <text class="t" x="135" y="38" text-anchor="middle">User + session sequence</text>
+    <text class="s" x="135" y="68" text-anchor="middle">watch · skip · like · hide</text>
+    <text class="s" x="135" y="91" text-anchor="middle">item/action/time embeddings</text>
+    <text class="tag" x="135" y="124" text-anchor="middle">COMPUTE ONCE PER REQUEST</text>
+  </g>
+
+  <g transform="translate(75 405)">
+    <rect class="lime" width="270" height="150" rx="5"/>
+    <text class="t" x="135" y="38" text-anchor="middle">Candidate branch</text>
+    <text class="s" x="135" y="68" text-anchor="middle">item · creator · content</text>
+    <text class="s" x="135" y="91" text-anchor="middle">source scores · freshness</text>
+    <text class="tag" x="135" y="124" text-anchor="middle">BATCH × 200 CANDIDATES</text>
+  </g>
+
+  <g transform="translate(75 595)">
+    <rect class="node" width="270" height="130" rx="5"/>
+    <text class="t" x="135" y="38" text-anchor="middle">Request context</text>
+    <text class="s" x="135" y="68" text-anchor="middle">device · locale · time</text>
+    <text class="s" x="135" y="91" text-anchor="middle">network · experiments</text>
+  </g>
+
+  <g transform="translate(75 765)">
+    <rect class="node" width="270" height="120" rx="5"/>
+    <text class="t" x="135" y="38" text-anchor="middle">Dense + cross features</text>
+    <text class="s" x="135" y="68" text-anchor="middle">affinity · exposure · velocity</text>
+    <text class="s" x="135" y="91" text-anchor="middle">values + missingness + age</text>
+  </g>
+
+  <g transform="translate(445 205)">
+    <rect class="group" width="310" height="650" rx="6"/>
+    <text class="k" x="24" y="35">REPRESENTATION</text>
+    <g transform="translate(30 70)"><rect class="dark" width="250" height="145" rx="5"/><text class="tw" x="125" y="40" text-anchor="middle">Sequence encoder</text><text class="sw" x="125" y="70" text-anchor="middle">transformer or pooled history</text><text class="sw" x="125" y="94" text-anchor="middle">long + short-term intent</text><text class="tag" x="125" y="122" text-anchor="middle" fill="#fafaf5">SHARED REQUEST VECTOR</text></g>
+    <g transform="translate(30 260)"><rect class="blue" width="250" height="130" rx="5"/><text class="t" x="125" y="40" text-anchor="middle">Embedding lookups</text><text class="s" x="125" y="70" text-anchor="middle">item · creator · source</text><text class="s" x="125" y="94" text-anchor="middle">content + categorical IDs</text></g>
+    <g transform="translate(30 435)"><rect class="node" width="250" height="130" rx="5"/><text class="t" x="125" y="40" text-anchor="middle">Normalize + encode</text><text class="s" x="125" y="70" text-anchor="middle">numeric transforms</text><text class="s" x="125" y="94" text-anchor="middle">masks + freshness metadata</text></g>
+  </g>
+
+  <path class="arrow" d="M345 290H475"/>
+  <path class="arrow" d="M345 480H475"/>
+  <path class="arrow" d="M345 660H475"/>
+  <path class="arrow" d="M345 825H475"/>
+
+  <g transform="translate(825 270)">
+    <rect class="dark" width="300" height="500" rx="6"/>
+    <text class="k" x="25" y="38" fill="#c8cbc2">INTERACTION MODEL</text>
+    <text class="tw" x="150" y="100" text-anchor="middle">Candidate-conditioned</text>
+    <text class="tw" x="150" y="126" text-anchor="middle">shared representation</text>
+    <g transform="translate(35 170)"><rect class="node" width="230" height="90" rx="4"/><text class="small" x="115" y="36" text-anchor="middle">Cross-attention / DLRM</text><text class="s" x="115" y="61" text-anchor="middle">user × item × context</text></g>
+    <path class="arroww" d="M150 260V300"/>
+    <g transform="translate(35 300)"><rect class="blue" width="230" height="90" rx="4"/><text class="small" x="115" y="36" text-anchor="middle">Shared MLP trunk</text><text class="s" x="115" y="61" text-anchor="middle">batched candidate states</text></g>
+    <text class="tag" x="150" y="440" text-anchor="middle" fill="#c8cbc2">[REQUEST, CANDIDATE, D]</text>
+  </g>
+
+  <path class="arrow" d="M755 530H825"/>
+
+  <rect class="group" x="1195" y="145" width="455" height="650" rx="6"/>
+  <text class="k" x="1220" y="180">MULTI-TASK OUTCOME HEADS</text>
+
+  <g transform="translate(1225 215)"><rect class="blue" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">P(meaningful watch)</text><text class="s" x="93" y="61" text-anchor="middle">binary + calibrated</text></g>
+  <g transform="translate(1435 215)"><rect class="node" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">E(watch fraction)</text><text class="s" x="93" y="61" text-anchor="middle">bounded regression</text></g>
+  <g transform="translate(1225 335)"><rect class="node" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">P(like or share)</text><text class="s" x="93" y="61" text-anchor="middle">sparse positive signal</text></g>
+  <g transform="translate(1435 335)"><rect class="lime" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">P(hide or report)</text><text class="s" x="93" y="61" text-anchor="middle">negative guardrail</text></g>
+  <g transform="translate(1225 455)"><rect class="node" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">P(return in 7d)</text><text class="s" x="93" y="61" text-anchor="middle">delayed horizon</text></g>
+  <g transform="translate(1435 455)"><rect class="node" width="185" height="90" rx="4"/><text class="small" x="93" y="36" text-anchor="middle">Quality / safety</text><text class="s" x="93" y="61" text-anchor="middle">auxiliary diagnostics</text></g>
+
+  <g transform="translate(1260 595)">
+    <rect class="muted" width="325" height="135" rx="5"/>
+    <text class="t" x="163" y="40" text-anchor="middle">Per-head calibration</text>
+    <text class="s" x="163" y="70" text-anchor="middle">reliability curves · slice checks</text>
+    <text class="s" x="163" y="94" text-anchor="middle">comparable probabilities and expectations</text>
+    <text class="tag" x="163" y="118" text-anchor="middle">VERSIONED WITH MODEL BUNDLE</text>
+  </g>
+
+  <path class="arrow" d="M1125 520H1195"/>
+
+  <g transform="translate(930 870)">
+    <rect class="blue" width="310" height="150" rx="5"/>
+    <text class="t" x="155" y="39" text-anchor="middle">Versioned value function</text>
+    <text class="s" x="155" y="69" text-anchor="middle">weighted calibrated outcomes</text>
+    <text class="s" x="155" y="92" text-anchor="middle">experiment + surface policy</text>
+    <text class="tag" x="155" y="122" text-anchor="middle">CHANGE WITHOUT RETRAINING HEADS</text>
+  </g>
+
+  <g transform="translate(1330 870)">
+    <rect class="dark" width="280" height="150" rx="5"/>
+    <text class="tw" x="140" y="39" text-anchor="middle">Slate re-ranker</text>
+    <text class="sw" x="140" y="69" text-anchor="middle">hard eligibility + safety</text>
+    <text class="sw" x="140" y="92" text-anchor="middle">diversity · freshness · exploration</text>
+    <text class="tag" x="140" y="122" text-anchor="middle" fill="#fafaf5">200 SCORES → 20 ITEMS</text>
+  </g>
+
+  <path class="policy" d="M1423 730V815H1085V870"/>
+  <path class="arrow" d="M1240 945H1330"/>
+  <text class="tag" x="1285" y="930" text-anchor="middle">UTILITY</text>
+
+  <text class="s" x="850" y="1080" text-anchor="middle">Prediction estimates observable outcomes. The value function expresses product trade-offs. The slate layer enforces list-level constraints.</text>
+</svg>

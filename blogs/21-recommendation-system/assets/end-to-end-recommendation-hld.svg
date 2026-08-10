@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" role="img" aria-labelledby="title desc">
+  <title id="title">End-to-end recommendation system high-level design</title>
+  <desc id="desc">A bounded online request path runs parallel candidate generators, merge and eligibility, pre-ranking, feature hydration, heavy ranking, slate policy, and response logging. An asynchronous learning path updates online state and promotes versioned models and indexes.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.lane{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:3;marker-end:url(#arrow)}.feedback{fill:none;stroke:#4e62a8;stroke-width:3;stroke-dasharray:10 8;marker-end:url(#feedback)}.bundle{fill:none;stroke:#777a70;stroke-width:2.5;stroke-dasharray:8 7;marker-end:url(#bundle)}.k{font:700 13px ui-monospace,monospace;letter-spacing:1.6px;fill:#777a70}.h{font:700 30px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 17px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 17px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 12px Inter,Arial,sans-serif;fill:#55584f}.sw{font:500 12px Inter,Arial,sans-serif;fill:#c8cbc2}.count{font:700 11px ui-monospace,monospace;letter-spacing:1px;fill:#55584f}.small{font:700 13px Inter,Arial,sans-serif;fill:#11120f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+    <marker id="feedback" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4e62a8"/></marker>
+    <marker id="bundle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#777a70"/></marker>
+  </defs>
+
+  <rect class="bg" width="1800" height="1200"/>
+  <text class="k" x="50" y="48">HIGH-LEVEL DESIGN · ONE BOUNDED DECISION PATH, ONE ASYNCHRONOUS LEARNING LOOP</text>
+  <text class="h" x="50" y="96">Search broadly. Score selectively. Compose deliberately. Learn from exposure.</text>
+
+  <rect class="lane" x="40" y="130" width="1720" height="500" rx="6"/>
+  <text class="k" x="65" y="165">REGION-LOCAL ONLINE REQUEST PATH · 200 MS P99</text>
+
+  <g transform="translate(70 235)">
+    <rect class="node" width="150" height="145" rx="5"/>
+    <text class="t" x="75" y="44" text-anchor="middle">Feed request</text>
+    <text class="s" x="75" y="75" text-anchor="middle">user · session</text>
+    <text class="s" x="75" y="97" text-anchor="middle">locale · device</text>
+    <text class="s" x="75" y="119" text-anchor="middle">experiments</text>
+  </g>
+
+  <path class="arrow" d="M220 307H265"/>
+
+  <g transform="translate(265 190)">
+    <rect class="blue" width="350" height="335" rx="5"/>
+    <text class="k" x="22" y="32" fill="#11120f">PARALLEL CANDIDATE GENERATORS</text>
+    <g transform="translate(22 58)"><rect class="node" width="145" height="72" rx="4"/><text class="small" x="73" y="29" text-anchor="middle">Personalized ANN</text><text class="s" x="73" y="51" text-anchor="middle">query tower + index</text></g>
+    <g transform="translate(183 58)"><rect class="node" width="145" height="72" rx="4"/><text class="small" x="73" y="29" text-anchor="middle">Subscriptions</text><text class="s" x="73" y="51" text-anchor="middle">exact + cached</text></g>
+    <g transform="translate(22 146)"><rect class="node" width="145" height="72" rx="4"/><text class="small" x="73" y="29" text-anchor="middle">Co-watch graph</text><text class="s" x="73" y="51" text-anchor="middle">cached neighbors</text></g>
+    <g transform="translate(183 146)"><rect class="node" width="145" height="72" rx="4"/><text class="small" x="73" y="29" text-anchor="middle">Trending + fresh</text><text class="s" x="73" y="51" text-anchor="middle">regional cohorts</text></g>
+    <g transform="translate(22 234)"><rect class="node" width="306" height="66" rx="4"/><text class="small" x="153" y="27" text-anchor="middle">Content similarity + controlled exploration</text><text class="s" x="153" y="49" text-anchor="middle">cold start, discovery, and safe fallback coverage</text></g>
+  </g>
+
+  <path class="arrow" d="M615 307H660"/>
+  <text class="count" x="638" y="292" text-anchor="middle">≈5K</text>
+
+  <g transform="translate(660 232)">
+    <rect class="muted" width="165" height="150" rx="5"/>
+    <text class="t" x="83" y="38" text-anchor="middle">Merge + dedupe</text>
+    <text class="t" x="83" y="61" text-anchor="middle">+ eligibility</text>
+    <text class="s" x="83" y="92" text-anchor="middle">source quotas</text>
+    <text class="s" x="83" y="114" text-anchor="middle">policy · availability</text>
+  </g>
+
+  <path class="arrow" d="M825 307H870"/>
+
+  <g transform="translate(870 232)">
+    <rect class="lime" width="145" height="150" rx="5"/>
+    <text class="t" x="73" y="43" text-anchor="middle">Pre-rank</text>
+    <text class="s" x="73" y="75" text-anchor="middle">cheap CPU batch</text>
+    <text class="s" x="73" y="99" text-anchor="middle">preserve recall</text>
+    <text class="count" x="73" y="127" text-anchor="middle">5K → 1K</text>
+  </g>
+
+  <path class="arrow" d="M1015 307H1060"/>
+
+  <g transform="translate(1060 232)">
+    <rect class="node" width="145" height="150" rx="5"/>
+    <text class="t" x="73" y="43" text-anchor="middle">Hydrate</text>
+    <text class="t" x="73" y="66" text-anchor="middle">rich features</text>
+    <text class="s" x="73" y="97" text-anchor="middle">online state</text>
+    <text class="s" x="73" y="119" text-anchor="middle">freshness + defaults</text>
+  </g>
+
+  <path class="arrow" d="M1205 307H1250"/>
+
+  <g transform="translate(1250 232)">
+    <rect class="dark" width="145" height="150" rx="5"/>
+    <text class="tw" x="73" y="43" text-anchor="middle">Heavy rank</text>
+    <text class="sw" x="73" y="75" text-anchor="middle">shared context</text>
+    <text class="sw" x="73" y="99" text-anchor="middle">multi-task heads</text>
+    <text class="count" x="73" y="127" text-anchor="middle" fill="#fafaf5">1K → 200</text>
+  </g>
+
+  <path class="arrow" d="M1395 307H1440"/>
+
+  <g transform="translate(1440 215)">
+    <rect class="blue" width="150" height="185" rx="5"/>
+    <text class="t" x="75" y="42" text-anchor="middle">Value + slate</text>
+    <text class="t" x="75" y="65" text-anchor="middle">policy</text>
+    <text class="s" x="75" y="96" text-anchor="middle">calibration · safety</text>
+    <text class="s" x="75" y="118" text-anchor="middle">diversity · freshness</text>
+    <text class="s" x="75" y="140" text-anchor="middle">exploration</text>
+    <text class="count" x="75" y="166" text-anchor="middle">200 → 20</text>
+  </g>
+
+  <path class="arrow" d="M1590 307H1630"/>
+
+  <g transform="translate(1630 240)">
+    <rect class="node" width="105" height="135" rx="5"/>
+    <text class="t" x="53" y="37" text-anchor="middle">Response</text>
+    <text class="s" x="53" y="67" text-anchor="middle">20 items</text>
+    <text class="s" x="53" y="89" text-anchor="middle">request ID</text>
+    <text class="s" x="53" y="111" text-anchor="middle">versions</text>
+  </g>
+
+  <g transform="translate(870 455)">
+    <rect class="node" width="305" height="105" rx="5"/>
+    <text class="t" x="153" y="36" text-anchor="middle">Safe baseline cache</text>
+    <text class="s" x="153" y="63" text-anchor="middle">trending · subscriptions · policy-approved inventory</text>
+    <text class="s" x="153" y="84" text-anchor="middle">used when learned dependencies miss their deadlines</text>
+  </g>
+  <path class="bundle" d="M1175 507H1515V402"/>
+  <text class="count" x="1335" y="493" text-anchor="middle">DEGRADED PATH</text>
+
+  <rect class="lane" x="40" y="665" width="1720" height="465" rx="6"/>
+  <text class="k" x="65" y="700">ASYNCHRONOUS STATE, TRAINING, AND RELEASE PLANE</text>
+
+  <path class="feedback" d="M1683 375V755H1515"/>
+  <text class="count" x="1660" y="665" text-anchor="end" fill="#4e62a8">IMPRESSIONS + OUTCOMES</text>
+
+  <g transform="translate(1370 730)">
+    <rect class="blue" width="145" height="120" rx="5"/>
+    <text class="t" x="73" y="40" text-anchor="middle">Event stream</text>
+    <text class="s" x="73" y="69" text-anchor="middle">dedupe · event time</text>
+    <text class="s" x="73" y="91" text-anchor="middle">exposure lineage</text>
+  </g>
+
+  <g transform="translate(1370 930)">
+    <rect class="lime" width="145" height="120" rx="5"/>
+    <text class="t" x="73" y="40" text-anchor="middle">Online state</text>
+    <text class="s" x="73" y="69" text-anchor="middle">session · velocity</text>
+    <text class="s" x="73" y="91" text-anchor="middle">freshness metadata</text>
+  </g>
+  <path class="arrow" d="M1443 850V930"/>
+  <path class="feedback" d="M1370 990H1133V384"/>
+
+  <g transform="translate(80 800)">
+    <rect class="node" width="170" height="120" rx="5"/>
+    <text class="t" x="85" y="40" text-anchor="middle">Event lake</text>
+    <text class="s" x="85" y="69" text-anchor="middle">candidates · exposure</text>
+    <text class="s" x="85" y="91" text-anchor="middle">outcomes · policies</text>
+  </g>
+  <path class="feedback" d="M1370 790H280V860H250"/>
+
+  <g transform="translate(320 800)">
+    <rect class="blue" width="180" height="120" rx="5"/>
+    <text class="t" x="90" y="40" text-anchor="middle">Point-in-time data</text>
+    <text class="s" x="90" y="69" text-anchor="middle">features as-of request</text>
+    <text class="s" x="90" y="91" text-anchor="middle">labels + propensities</text>
+  </g>
+  <path class="arrow" d="M250 860H320"/>
+
+  <g transform="translate(570 800)">
+    <rect class="dark" width="180" height="120" rx="5"/>
+    <text class="tw" x="90" y="40" text-anchor="middle">Train + evaluate</text>
+    <text class="sw" x="90" y="69" text-anchor="middle">retrieval · pre-rank</text>
+    <text class="sw" x="90" y="91" text-anchor="middle">ranker · calibration</text>
+  </g>
+  <path class="arrow" d="M500 860H570"/>
+
+  <g transform="translate(820 800)">
+    <rect class="lime" width="180" height="120" rx="5"/>
+    <text class="t" x="90" y="40" text-anchor="middle">Build + validate</text>
+    <text class="s" x="90" y="69" text-anchor="middle">item ANN index</text>
+    <text class="s" x="90" y="91" text-anchor="middle">parity · recall · load</text>
+  </g>
+  <path class="arrow" d="M750 860H820"/>
+
+  <g transform="translate(1070 785)">
+    <rect class="muted" width="205" height="150" rx="5"/>
+    <text class="t" x="103" y="39" text-anchor="middle">Versioned bundle</text>
+    <text class="s" x="103" y="68" text-anchor="middle">towers · index · rankers</text>
+    <text class="s" x="103" y="90" text-anchor="middle">feature schema · calibration</text>
+    <text class="s" x="103" y="112" text-anchor="middle">value policy · fallback</text>
+    <text class="count" x="103" y="135" text-anchor="middle">SHADOW → CANARY → PROMOTE</text>
+  </g>
+  <path class="arrow" d="M1000 860H1070"/>
+
+  <path class="bundle" d="M1173 785V590H440V527"/>
+  <path class="bundle" d="M1173 785V610H943V384"/>
+  <path class="bundle" d="M1173 785V610H1323V384"/>
+  <path class="bundle" d="M1173 785V610H1515V402"/>
+  <text class="count" x="750" y="594">IMMUTABLE ARTIFACTS CROSS INTO SERVING</text>
+
+  <text class="s" x="900" y="1170" text-anchor="middle">A request pins one bundle version; a training job can publish a candidate artifact but cannot mutate an in-flight decision.</text>
+</svg>

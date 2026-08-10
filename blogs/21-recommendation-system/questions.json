@@ -27,6 +27,19 @@
       "followUp": "If retention is too slow for a canary decision, which faster proxy and guardrails would you trust?"
     },
     {
+      "sectionId": "high-level-design-separate-search-scoring-and-composition",
+      "prompt": "A team proposes one large model that searches the full catalog, chooses the final order, and enforces diversity. What is the strongest architectural objection?",
+      "options": [
+        { "text": "A single model can never learn more than one objective", "feedback": "Models can learn multiple objectives; the deeper problem is that catalog search, precise scoring, and constrained slate composition have incompatible compute and serving contracts." },
+        { "text": "Search, scoring, and slate composition optimize different jobs at radically different candidate scales", "feedback": "Correct. Retrieval needs broad recall, ranking spends rich compute on a bounded set, and slate policy applies list-level constraints and product trade-offs." },
+        { "text": "Every recommendation stage must be owned by a different team", "feedback": "Clear boundaries matter, but organizational separation is not required and can be premature for a small system." },
+        { "text": "The final slate must be generated before any candidate scores exist", "feedback": "Slate composition depends on candidate evidence and scores; reversing the sequence does not solve the scaling problem." }
+      ],
+      "answer": 1,
+      "explanation": "The multi-stage architecture is a computational and decision decomposition. Each stage receives fewer candidates, spends more per candidate, and exposes a contract that can be measured, degraded, and evolved independently.",
+      "followUp": "If latency forces you to remove one stage temporarily, which stage could be bypassed safely and what fallback behavior would replace it?"
+    },
+    {
       "sectionId": "size-the-decision-funnel-and-latency-budget",
       "prompt": "You have 50 million items and a 120 ms p99 deadline. Why is scoring every item with the final ranker the wrong design?",
       "options": [

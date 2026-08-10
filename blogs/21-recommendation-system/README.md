@@ -27,6 +27,7 @@ This article will build that system three times. The first version is intentiona
 
 - Frame the product before choosing a model
 - Define success without training clickbait
+- High-level design: separate search, scoring, and composition
 - Size the decision funnel and latency budget
 - Scenario 1: ship a useful baseline in weeks
 - Learn from impressions, not clicks alone
@@ -98,6 +99,27 @@ No single metric is the release gate. We track:
 - system: p50/p95/p99 latency, timeout and fallback rate, QPS, and cost per thousand feeds.
 
 A model ships only if it improves the objective without breaking latency, safety, or ecosystem guardrails.
+
+## High-Level Design: Separate Search, Scoring, and Composition
+
+Before choosing individual models, draw the complete decision path. The request enters with user, session, device, locale, and experiment context. Several candidate generators run in parallel because each source represents different evidence and fails differently. Their results are merged, deduplicated, checked for eligibility, and narrowed by a cheap pre-ranker. Only then do we fetch the richest cross features and spend heavy-model compute. A final policy-aware re-ranker composes the slate, and the response is logged with enough lineage to learn from what the system actually exposed.
+
+This decomposition creates five explicit contracts:
+
+1. **Candidate generation searches broadly.** Personalized ANN retrieval, subscriptions, co-watch, trending, fresh inventory, and exploration optimize coverage and Recall@K—not final ordering.
+2. **Pre-ranking protects scarce compute.** It cheaply removes obvious weak candidates while preserving items the heavy ranker might place highly.
+3. **Heavy ranking predicts outcomes.** It estimates meaningful watch, satisfaction, negative feedback, and return behavior using richer user-item-context interactions.
+4. **Slate policy makes the product decision.** A versioned value function and deterministic constraints balance relevance with safety, diversity, freshness, creator concentration, and exploration.
+5. **Exposure logging closes the loop.** Candidate provenance, positions, propensities, feature/model versions, and outcomes feed streaming state and point-in-time training data.
+
+The synchronous request path should remain region-local and bounded. Model training, item-embedding generation, ANN index construction, evaluation, and artifact promotion belong in the asynchronous control and learning plane. Versioned bundles connect the two planes; raw training jobs never mutate a live request halfway through its execution.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/end-to-end-recommendation-hld.svg" target="_blank" rel="noreferrer"><img src="assets/end-to-end-recommendation-hld.svg" alt="End-to-end recommendation system high-level design with parallel candidate generators, merge and eligibility, pre-ranking, feature hydration, heavy ranking, slate policy, response logging, streaming state, offline training, and versioned model bundles"></a>
+  <figcaption>The request path narrows candidates under strict deadlines while the asynchronous learning path turns logged exposure and outcomes into a new immutable serving bundle.</figcaption>
+</figure>
+
+This is the stable architectural spine for all three scenarios in the article. Scenario 1 implements several boxes inside one modular service. Scenario 2 replaces heuristic internals with learned retrieval and ranking. Scenario 3 introduces network boundaries only where scaling, ownership, runtime, or failure isolation requires them.
 
 ## Size the Decision Funnel and Latency Budget
 
@@ -320,6 +342,15 @@ P(like), P(share), P(hide/report), P(return)
 ```
 
 Multi-task learning shares representations and exposes tradeoffs. The value layer combines calibrated outputs with business policy; do not hide all product priorities inside one opaque training label.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/internal-ranker-architecture.svg" target="_blank" rel="noreferrer"><img src="assets/internal-ranker-architecture.svg" alt="Internal recommendation ranker architecture that computes one user and session representation, combines it with batched candidate and context features, predicts multiple calibrated outcomes, and applies a versioned value function before slate re-ranking"></a>
+  <figcaption>Compute shared request context once, score candidates as a batch, keep observable outcomes in separate calibrated heads, and apply product priorities in a versioned value layer.</figcaption>
+</figure>
+
+### Follow one candidate through the ranker
+
+The request branch encodes recent actions once. Each surviving candidate contributes item and creator embeddings, freshness, quality, and retrieval provenance. The interaction layer combines that candidate with the shared request representation and dense cross features. Separate heads predict observable outcomes; calibration makes scores comparable; the value function converts those predictions into a scalar utility for slate composition. This boundary keeps model learning, business policy, and list-level constraints independently testable.
 
 ## Re-Rank the Slate, Not Twenty Independent Items
 
