@@ -84,6 +84,110 @@ if (mobileTocTargets.length) {
   mobileTocViewport.addEventListener?.("change", requestSectionUpdate);
 }
 
+const quizzes = [...document.querySelectorAll("[data-quiz]")];
+const quizSummary = document.querySelector("[data-quiz-summary]");
+
+if (quizzes.length && quizSummary) {
+  const storageKey = quizSummary.dataset.quizStorage;
+  const answeredCount = quizSummary.querySelector("[data-quiz-answered]");
+  const correctCount = quizSummary.querySelector("[data-quiz-correct]");
+  const progressBar = quizSummary.querySelector("[data-quiz-progress]");
+  const resetAllButton = quizSummary.querySelector("[data-quiz-reset]");
+  let savedAnswers = {};
+
+  try {
+    savedAnswers = JSON.parse(localStorage.getItem(storageKey) ?? "{}") ?? {};
+  } catch (_) {
+    savedAnswers = {};
+  }
+
+  const saveAnswers = () => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(savedAnswers));
+    } catch (_) {}
+  };
+
+  const updateQuizSummary = () => {
+    const answered = quizzes.filter((quiz) => quiz.classList.contains("is-answered")).length;
+    const correct = quizzes.filter((quiz) => quiz.classList.contains("is-correct")).length;
+    if (answeredCount) answeredCount.textContent = String(answered);
+    if (correctCount) correctCount.textContent = String(correct);
+    if (progressBar) progressBar.style.width = `${(answered / quizzes.length) * 100}%`;
+    if (resetAllButton) resetAllButton.disabled = answered === 0;
+  };
+
+  const resetQuiz = (quiz, { persist = true, focus = true } = {}) => {
+    quiz.classList.remove("is-answered", "is-correct", "is-incorrect");
+    quiz.querySelectorAll("[data-quiz-option]").forEach((option) => {
+      option.classList.remove("is-selected", "is-correct-answer");
+    });
+    quiz.querySelectorAll("input[type='radio']").forEach((input) => {
+      input.checked = false;
+      input.disabled = false;
+    });
+    const feedback = quiz.querySelector("[data-quiz-feedback]");
+    if (feedback) feedback.hidden = true;
+    delete savedAnswers[quiz.dataset.quizId];
+    if (persist) saveAnswers();
+    updateQuizSummary();
+    if (focus) quiz.querySelector("input[type='radio']")?.focus();
+  };
+
+  const gradeQuiz = (quiz, selectedIndex, { persist = true, focus = true } = {}) => {
+    const inputs = [...quiz.querySelectorAll("input[type='radio']")];
+    const answerIndex = Number(quiz.dataset.answer);
+    const selected = inputs[selectedIndex];
+    const correct = inputs[answerIndex];
+    if (!selected || !correct) return;
+
+    const isCorrect = selectedIndex === answerIndex;
+    quiz.classList.add("is-answered", isCorrect ? "is-correct" : "is-incorrect");
+    selected.checked = true;
+    selected.closest("[data-quiz-option]")?.classList.add("is-selected");
+    correct.closest("[data-quiz-option]")?.classList.add("is-correct-answer");
+    inputs.forEach((input) => {
+      input.disabled = true;
+    });
+
+    const feedback = quiz.querySelector("[data-quiz-feedback]");
+    const result = quiz.querySelector("[data-quiz-result]");
+    const optionFeedback = quiz.querySelector("[data-quiz-option-feedback]");
+    const bestAnswer = quiz.querySelector("[data-quiz-best-answer]");
+    if (result) result.textContent = isCorrect ? "Correct." : "Not quite.";
+    if (optionFeedback) optionFeedback.textContent = selected.dataset.feedback;
+    if (bestAnswer) {
+      bestAnswer.textContent = correct.closest("[data-quiz-option]")?.querySelector(".quiz-option-text")?.textContent ?? "";
+    }
+    if (feedback) feedback.hidden = false;
+
+    savedAnswers[quiz.dataset.quizId] = selectedIndex;
+    if (persist) saveAnswers();
+    updateQuizSummary();
+    if (focus) feedback?.focus({ preventScroll: true });
+  };
+
+  quizzes.forEach((quiz) => {
+    quiz.querySelector("form")?.addEventListener("submit", (event) => event.preventDefault());
+    quiz.addEventListener("change", (event) => {
+      if (!(event.target instanceof HTMLInputElement) || event.target.type !== "radio") return;
+      gradeQuiz(quiz, Number(event.target.value));
+    });
+    quiz.querySelector("[data-quiz-retry]")?.addEventListener("click", () => resetQuiz(quiz));
+
+    const restoredAnswer = savedAnswers[quiz.dataset.quizId];
+    if (Number.isInteger(restoredAnswer)) gradeQuiz(quiz, restoredAnswer, { persist: false, focus: false });
+  });
+
+  resetAllButton?.addEventListener("click", () => {
+    quizzes.forEach((quiz) => resetQuiz(quiz, { persist: false, focus: false }));
+    savedAnswers = {};
+    saveAnswers();
+    quizzes[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  updateQuizSummary();
+}
+
 const themeButtons = document.querySelectorAll("[data-theme-toggle]");
 const themeColor = document.querySelector("[data-theme-color]");
 const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");

@@ -1,0 +1,316 @@
+{
+  "questions": [
+    {
+      "sectionId": "frame-the-product-before-choosing-a-model",
+      "prompt": "A team says, “Build us a recommender,” and immediately proposes item embeddings. What is the most important first response?",
+      "options": [
+        { "text": "Choose the largest embedding model that fits the GPU budget", "feedback": "Model capacity is premature because the product surface, decision, and acceptable outcomes are still undefined." },
+        { "text": "Clarify the surface, user decision, candidate inventory, objective, and unacceptable outcomes", "feedback": "Correct. These constraints determine what is predicted, when it is predicted, and what the system must optimize or prevent." },
+        { "text": "Copy the architecture of a large video platform", "feedback": "A published architecture reflects another product's inventory, latency, and business constraints." },
+        { "text": "Start collecting clicks and decide the objective after launch", "feedback": "Unframed logging often omits exposures, positions, and guardrails that cannot be reconstructed later." }
+      ],
+      "answer": 1,
+      "explanation": "A recommendation model is downstream of a product decision. Defining the surface and action makes the labels, latency budget, candidate set, metrics, and safety constraints concrete.",
+      "followUp": "How would your framing differ between a home feed, an email digest, and recommendations inside checkout?"
+    },
+    {
+      "sectionId": "define-success-without-training-clickbait",
+      "prompt": "CTR rises 12%, but users hide more recommendations and seven-day retention falls. Which launch decision is most defensible?",
+      "options": [
+        { "text": "Launch because CTR is the direct model objective", "feedback": "A proxy metric cannot override evidence that the product is creating longer-term harm." },
+        { "text": "Increase the click weight so the offline objective matches the CTR result", "feedback": "This strengthens the same proxy and can make the harmful behavior worse." },
+        { "text": "Hold the launch and evaluate qualified engagement with retention and negative-feedback guardrails", "feedback": "Correct. The decision should combine a useful primary outcome with explicit product-health constraints." },
+        { "text": "Ignore all online metrics until the model has accumulated one month of data", "feedback": "Waiting discards actionable guardrail evidence and exposes more users to a likely regression." }
+      ],
+      "answer": 2,
+      "explanation": "Clicks are easy to optimize and easy to game. A production objective needs downstream value plus guardrails for dissatisfaction, concentration, safety, and long-term health.",
+      "followUp": "If retention is too slow for a canary decision, which faster proxy and guardrails would you trust?"
+    },
+    {
+      "sectionId": "size-the-decision-funnel-and-latency-budget",
+      "prompt": "You have 50 million items and a 120 ms p99 deadline. Why is scoring every item with the final ranker the wrong design?",
+      "options": [
+        { "text": "The final ranker cannot produce calibrated probabilities", "feedback": "Calibration is independent of whether the ranker evaluates fifty or fifty million candidates." },
+        { "text": "The network can never transfer item identifiers quickly enough", "feedback": "Identifier transfer matters, but model compute and feature retrieval dominate the infeasible exhaustive path." },
+        { "text": "Cost and latency grow with the full corpus, so retrieval must shrink the set before expensive scoring", "feedback": "Correct. A multi-stage funnel spends increasing compute on progressively smaller candidate sets." },
+        { "text": "Approximate retrieval is always more accurate than exact scoring", "feedback": "Approximation trades some recall for tractability; it is not inherently more accurate." }
+      ],
+      "answer": 2,
+      "explanation": "The serving budget should be allocated across candidate generation, feature retrieval, pre-ranking, ranking, and slate constraints. Exhaustive final-model scoring does not scale with corpus size.",
+      "followUp": "How would you divide the latency budget if online feature reads become the dominant p99 stage?"
+    },
+    {
+      "sectionId": "scenario-1-ship-a-useful-baseline-in-weeks",
+      "prompt": "A new marketplace has sparse interaction history and must launch recommendations in three weeks. What should ship first?",
+      "options": [
+        { "text": "A segmented popularity and freshness baseline with eligibility and diversity rules", "feedback": "Correct. It is observable, debuggable, cold-start friendly, and establishes a real benchmark quickly." },
+        { "text": "A transformer trained on the first week of clicks", "feedback": "Sparse, biased data and an unproven serving path make this a high-risk first release." },
+        { "text": "A per-user nearest-neighbor index rebuilt after every click", "feedback": "The operational complexity is not justified before there is enough user history or measured value." },
+        { "text": "Random recommendations to guarantee unbiased data", "feedback": "Full randomization damages relevance; bounded exploration can collect information without abandoning utility." }
+      ],
+      "answer": 0,
+      "explanation": "A strong baseline creates product value, exposes logging gaps, and provides the control that later personalized models must beat.",
+      "followUp": "Which measured failure would justify moving from segmented popularity to personalization?"
+    },
+    {
+      "sectionId": "learn-from-impressions-not-clicks-alone",
+      "prompt": "The training table contains clicked items but not the items users saw and ignored. What is the most serious consequence?",
+      "options": [
+        { "text": "The system cannot distinguish non-exposure from an observed negative outcome", "feedback": "Correct. Missing impression context corrupts negative sampling and makes evaluation selection-biased." },
+        { "text": "The model will necessarily overfit because every row is positive", "feedback": "Overfitting may occur, but the deeper issue is that the counterfactual candidate and exposure set is unknown." },
+        { "text": "The item embeddings will be too small", "feedback": "Embedding dimensionality does not recover missing exposure information." },
+        { "text": "Clicks can no longer be joined to user identifiers", "feedback": "Identity joins may still work; what is lost is what was eligible, ranked, displayed, and skipped." }
+      ],
+      "answer": 0,
+      "explanation": "Every impression should preserve request context, candidates, positions, model and policy versions, and resulting actions. Click-only data cannot tell whether an item was rejected or never shown.",
+      "followUp": "Which fields must an impression event contain to support unbiased replay and position-aware evaluation?"
+    },
+    {
+      "sectionId": "establish-offline-evaluation-without-temporal-leakage",
+      "prompt": "A ranking model looks excellent under a random interaction split but regresses in production. Which audit should happen first?",
+      "options": [
+        { "text": "Increase the random test set from 10% to 20%", "feedback": "A larger random split preserves the same future-information leakage." },
+        { "text": "Check chronological splits and point-in-time feature joins", "feedback": "Correct. Future interactions or post-label aggregates can make offline ranking appear unrealistically strong." },
+        { "text": "Replace NDCG with accuracy", "feedback": "Accuracy ignores ranked position and does not correct temporal leakage." },
+        { "text": "Add production outcomes to the old training rows", "feedback": "That can introduce even more future information unless joined as of each historical decision time." }
+      ],
+      "answer": 1,
+      "explanation": "Offline evaluation must recreate what the system knew at decision time. Chronological holdouts, point-in-time joins, and request-level candidate replay are core correctness requirements.",
+      "followUp": "How would you evaluate a new-item recommender when the item did not exist during most of the training window?"
+    },
+    {
+      "sectionId": "scenario-2-add-personalized-retrieval-and-ranking",
+      "prompt": "The baseline is reliable, but returning users repeatedly see generic popular items despite rich histories. What is the next justified evolution?",
+      "options": [
+        { "text": "Add personalized candidate retrieval and a learned ranker behind the existing fallback", "feedback": "Correct. The measured relevance gap now justifies personalization while preserving a safe baseline." },
+        { "text": "Remove popularity candidates entirely", "feedback": "Popularity remains useful for cold start, robustness, and coverage even after personalization is added." },
+        { "text": "Split every pipeline stage into a separate service", "feedback": "A relevance failure does not itself justify new network and operational boundaries." },
+        { "text": "Retrain the popularity list every minute", "feedback": "Fresher global popularity does not use the returning user's individual evidence." }
+      ],
+      "answer": 0,
+      "explanation": "Architecture should evolve in response to a measured product limitation. Personalized retrieval expands relevant recall, and ranking learns interactions among user, item, and context signals.",
+      "followUp": "What evidence would tell you that retrieval recall, rather than ranking quality, is the current bottleneck?"
+    },
+    {
+      "sectionId": "generate-candidates-from-several-kinds-of-evidence",
+      "prompt": "Collaborative retrieval performs well for established items but almost never surfaces new inventory. What is the best correction?",
+      "options": [
+        { "text": "Increase the collaborative candidate quota", "feedback": "More candidates from the same source preserve its cold-item blind spot." },
+        { "text": "Union collaborative, content, freshness, popularity, and business-eligible sources with source quotas", "feedback": "Correct. Complementary sources cover different evidence and failure modes before ranking." },
+        { "text": "Force every new item directly into the final slate", "feedback": "Unbounded forced exposure can damage relevance and ignores eligibility and quality constraints." },
+        { "text": "Train only on interactions from new items", "feedback": "That sacrifices established-item performance and still does not create exposure for unseen inventory." }
+      ],
+      "answer": 1,
+      "explanation": "Candidate generation is a portfolio problem. Multiple sources improve coverage and resilience; quotas and deduplication keep one source from crowding out the others.",
+      "followUp": "How would you measure the incremental recall contributed by each candidate source?"
+    },
+    {
+      "sectionId": "choose-a-two-tower-retrieval-model-for-factorized-serving",
+      "prompt": "Why is a two-tower model attractive for retrieving from tens of millions of items under a tight deadline?",
+      "options": [
+        { "text": "It guarantees that the final ranking is globally optimal", "feedback": "Approximate nearest-neighbor retrieval does not guarantee the optimal final slate." },
+        { "text": "It can precompute item embeddings and compare one request embedding against an ANN index", "feedback": "Correct. Factorization moves most item computation offline and makes large-corpus retrieval tractable." },
+        { "text": "It eliminates the need for negative examples", "feedback": "Training still depends heavily on useful negatives and exposure-aware sampling." },
+        { "text": "It can use arbitrary cross-features between every user and item during retrieval", "feedback": "Independent towers limit direct cross-features; richer interactions are deferred to later ranking stages." }
+      ],
+      "answer": 1,
+      "explanation": "Two-tower serving factorizes user/context and item computation. Item vectors are materialized and indexed, while the request tower produces the query vector online.",
+      "followUp": "Which useful interaction features are lost by factorization, and where would you reintroduce them?"
+    },
+    {
+      "sectionId": "add-a-pre-ranker-before-the-expensive-model",
+      "prompt": "The final ranker meets quality goals on 100 candidates but violates latency when given 2,000. What should the pre-ranker optimize?",
+      "options": [
+        { "text": "Perfect ordering of all 2,000 candidates", "feedback": "Perfect ordering duplicates the expensive ranker's job and defeats the latency purpose." },
+        { "text": "High recall of eventual winners while cheaply pruning obvious weak candidates", "feedback": "Correct. The pre-ranker protects final-ranker capacity without discarding strong candidates." },
+        { "text": "Maximum diversity regardless of relevance", "feedback": "Slate diversity is important, but aggressive early diversity can remove items the final stages need to compare." },
+        { "text": "The same feature set and model complexity as the final ranker", "feedback": "That would preserve most of the original cost rather than creating a cheaper stage." }
+      ],
+      "answer": 1,
+      "explanation": "A pre-ranker is a recall-preserving filter. It should use inexpensive features and a simpler model to reduce candidate count before costly feature joins and scoring.",
+      "followUp": "How would you detect that the pre-ranker is silently capping the final ranker's achievable quality?"
+    },
+    {
+      "sectionId": "pick-a-ranking-model-for-the-data-and-latency-we-actually-have",
+      "prompt": "You have strong tabular features, moderate data, CPU serving, and a 10 ms inference budget. Which first ranker is most defensible?",
+      "options": [
+        { "text": "A gradient-boosted tree model with calibrated outputs", "feedback": "Correct. It is a strong, fast baseline for nonlinear tabular interactions and missing values." },
+        { "text": "The largest sequence transformer that fits in training memory", "feedback": "Training fit does not prove online latency, operational simplicity, or incremental product value." },
+        { "text": "A random forest with one tree per item", "feedback": "Per-item models create sparse data and an unmanageable serving and release surface." },
+        { "text": "No learned model because tabular features cannot support ranking", "feedback": "Tabular user, item, context, and historical features often support excellent initial rankers." }
+      ],
+      "answer": 0,
+      "explanation": "Model choice follows data shape, latency, calibration, and operational constraints. A boosted-tree ranker is often the strongest honest baseline before sequence complexity is earned.",
+      "followUp": "What measured limitation would justify replacing the tree model with a sequence model?"
+    },
+    {
+      "sectionId": "re-rank-the-slate-not-twenty-independent-items",
+      "prompt": "The top 20 independently scored results are all near-duplicate items from one creator. What layer should address this?",
+      "options": [
+        { "text": "Increase every item's predicted click score", "feedback": "A uniform score change does not model interactions among selected items." },
+        { "text": "Apply a slate re-ranker with diversity, deduplication, and policy constraints", "feedback": "Correct. The utility of an item depends on what has already been placed in the slate." },
+        { "text": "Remove creator identity from all models and policies", "feedback": "Hiding the signal prevents concentration controls and can make the problem harder to observe." },
+        { "text": "Return only the single highest-scoring item", "feedback": "This avoids a duplicate slate by destroying the product requirement rather than solving it." }
+      ],
+      "answer": 1,
+      "explanation": "Pointwise relevance is not slate utility. A final constrained re-ranker can trade a small amount of predicted relevance for coverage, freshness, safety, and user experience.",
+      "followUp": "How would you tune diversity without letting an arbitrary quota overwhelm relevance?"
+    },
+    {
+      "sectionId": "keep-online-and-offline-features-consistent",
+      "prompt": "Offline metrics are stable, but production scores shift after a feature pipeline rewrite. What is the strongest diagnostic?",
+      "options": [
+        { "text": "Compare online feature snapshots with point-in-time offline values for the same requests", "feedback": "Correct. Request-level parity checks expose definition, freshness, default, and timestamp differences." },
+        { "text": "Retrain immediately on the shifted production scores", "feedback": "That can teach the model around a serving bug and erase the evidence needed to diagnose it." },
+        { "text": "Increase the model regularization parameter", "feedback": "Regularization does not reconcile two inconsistent feature computations." },
+        { "text": "Ignore the shift if overall request latency is unchanged", "feedback": "Serving correctness and system latency are independent dimensions." }
+      ],
+      "answer": 0,
+      "explanation": "Training-serving skew is a data-contract failure. Shared definitions, timestamp semantics, freshness metadata, and parity sampling keep offline and online computation aligned.",
+      "followUp": "Which defaults should the model receive when one online feature group is stale rather than missing?"
+    },
+    {
+      "sectionId": "build-the-training-and-model-release-loop",
+      "prompt": "A candidate model improves offline NDCG but changes score distribution sharply. What should happen before full rollout?",
+      "options": [
+        { "text": "Promote automatically because the offline metric improved", "feedback": "Offline gain alone does not prove feature compatibility, calibration, latency, or product safety." },
+        { "text": "Replay and validate artifacts, shadow production traffic, then canary with guardrails and rollback", "feedback": "Correct. Each gate answers a different correctness or risk question before broader exposure." },
+        { "text": "Run the model only for users who previously clicked recommendations", "feedback": "That creates a selected cohort and does not validate the general serving path." },
+        { "text": "Deploy both models and average scores indefinitely", "feedback": "An unversioned permanent blend obscures ownership and does not replace a controlled release decision." }
+      ],
+      "answer": 1,
+      "explanation": "A model release is a versioned software and data release. Artifact validation, replay, shadowing, canaries, and automated rollback protect against failures offline metrics cannot see.",
+      "followUp": "Which conditions should trigger automatic rollback during the first canary stage?"
+    },
+    {
+      "sectionId": "scenario-3-split-the-global-serving-path-deliberately",
+      "prompt": "Traffic is now global, and cross-region feature calls dominate tail latency. Which evolution best contains the problem?",
+      "options": [
+        { "text": "Route every request to one central model region", "feedback": "Centralization preserves the cross-region latency and creates a larger failure domain." },
+        { "text": "Use regional serving cells with local online state and globally distributed versioned artifacts", "feedback": "Correct. Regional data paths bound latency and failure while a control plane coordinates safe versions." },
+        { "text": "Replicate every raw event synchronously to every region before responding", "feedback": "Global synchronous replication puts WAN availability and latency inside the request deadline." },
+        { "text": "Disable personalization outside the original region permanently", "feedback": "A temporary fallback can be safe, but it does not solve the justified global serving requirement." }
+      ],
+      "answer": 1,
+      "explanation": "Global recommendation serving should keep the synchronous path local. Regional cells consume replicated events asynchronously and receive immutable model, feature, and policy versions.",
+      "followUp": "Which signals truly require global freshness, and which can tolerate eventual replication?"
+    },
+    {
+      "sectionId": "decide-between-a-modular-monolith-and-microservices",
+      "prompt": "One team owns a 200 RPS recommendation path whose stages scale together. Should it start as six networked services?",
+      "options": [
+        { "text": "Yes, because ML systems require microservices", "feedback": "ML does not remove the latency, deployment, and failure costs of unnecessary service boundaries." },
+        { "text": "Yes, because every module should have its own database", "feedback": "Independent persistence without ownership or scaling needs creates consistency and operational debt." },
+        { "text": "No; keep clear in-process modules until ownership, scaling, runtime, or failure isolation diverges", "feedback": "Correct. A modular monolith preserves seams without paying distributed-systems costs prematurely." },
+        { "text": "No; all future versions must remain one unstructured file", "feedback": "A monolith can and should maintain strong module, contract, and test boundaries." }
+      ],
+      "answer": 2,
+      "explanation": "Service boundaries should correspond to measurable independence. Until then, local calls simplify deadlines, transactions, debugging, and coordinated change.",
+      "followUp": "Which first component would you extract if candidate retrieval starts scaling independently?"
+    },
+    {
+      "sectionId": "map-the-design-to-aws-and-google-cloud",
+      "prompt": "During a cloud migration, what is the safest way to choose managed services for this recommender?",
+      "options": [
+        { "text": "Map each architectural responsibility and required guarantee to a managed capability", "feedback": "Correct. Responsibilities, latency, consistency, and failure behavior remain stable even when product names change." },
+        { "text": "Select the most recently announced service for each box", "feedback": "Recency does not establish workload fit or operational guarantees." },
+        { "text": "Use one database product for events, vectors, features, and analytics", "feedback": "Forcing unlike access patterns into one product can simplify a diagram while damaging the system." },
+        { "text": "Copy an AWS reference diagram and rename services for Google Cloud", "feedback": "Superficial naming ignores differences in semantics, regional behavior, and team experience." }
+      ],
+      "answer": 0,
+      "explanation": "Cloud mapping comes after architecture. Define the needed queueing, stream, online-store, warehouse, ANN, serving, and observability properties, then choose services that satisfy them.",
+      "followUp": "Which components would you keep portable, and where is provider-specific integration worth accepting?"
+    },
+    {
+      "sectionId": "handle-new-users-new-items-and-rapidly-changing-intent",
+      "prompt": "A long-time user suddenly begins shopping for baby products. Why is relying only on their historical embedding risky?",
+      "options": [
+        { "text": "Historical embeddings cannot be stored in an online feature store", "feedback": "They can be stored; the issue is that long-term history may lag current intent." },
+        { "text": "Session context and recent actions may be more predictive than the stable profile", "feedback": "Correct. A responsive system blends long-term preference with short-lived intent and contextual priors." },
+        { "text": "New intent should always replace all historical information", "feedback": "A single action may be noise; blending and decay are safer than unconditional replacement." },
+        { "text": "The user must be treated exactly like a brand-new account", "feedback": "Useful historical preferences still exist even when one intent dimension changes quickly." }
+      ],
+      "answer": 1,
+      "explanation": "Cold start and intent shift require priors, content features, session evidence, freshness, and uncertainty-aware blending rather than one permanent user vector.",
+      "followUp": "How would you distinguish a durable preference change from a short-lived shopping mission?"
+    },
+    {
+      "sectionId": "break-feedback-loops-with-logged-exposure-and-exploration",
+      "prompt": "The model trains only on clicks from its own top-ranked results. What intervention best reduces the resulting feedback loop?",
+      "options": [
+        { "text": "Log exposures and propensities, then use bounded randomized exploration", "feedback": "Correct. This creates information outside the current policy while preserving user utility." },
+        { "text": "Train for more epochs on the same click log", "feedback": "More optimization reinforces the same selected exposure distribution." },
+        { "text": "Remove all popular items from training", "feedback": "Popularity bias needs measurement and correction, not a blanket deletion that distorts reality." },
+        { "text": "Treat every unclicked catalog item as a negative", "feedback": "Most catalog items were never eligible or seen, so this manufactures false negatives." }
+      ],
+      "answer": 0,
+      "explanation": "Recommendation changes what data is observed. Exposure-aware logs, stable holdouts, propensity information, and controlled exploration make policy effects measurable.",
+      "followUp": "How would you set an exploration budget for a high-stakes surface where poor recommendations are costly?"
+    },
+    {
+      "sectionId": "design-degradation-before-dependencies-fail",
+      "prompt": "The ANN service exceeds its deadline during a traffic spike. What should the request path do?",
+      "options": [
+        { "text": "Retry until ANN returns so personalization is never lost", "feedback": "Retries can amplify the overload and consume the entire response deadline." },
+        { "text": "Fail the page because a non-personalized result is misleading", "feedback": "A bounded relevant fallback is usually better than losing the entire product surface." },
+        { "text": "Use a deadline-aware fallback such as cached, trending, or segmented-popularity candidates", "feedback": "Correct. Predefined degradation protects latency and availability while recording reduced quality." },
+        { "text": "Return the last raw ANN response even if it belongs to another user", "feedback": "Cross-user response reuse is both incorrect and potentially privacy violating." }
+      ],
+      "answer": 2,
+      "explanation": "Fallbacks are part of the serving contract. Each dependency should have a timeout, stale-data policy, compatible default, and observable degradation path.",
+      "followUp": "Which fallback would you choose if ranking works but online user features are stale?"
+    },
+    {
+      "sectionId": "observe-data-model-system-and-product-together",
+      "prompt": "CTR falls while model latency and error rate remain normal. Which investigation is most complete?",
+      "options": [
+        { "text": "Inspect only aggregate prediction-score histograms", "feedback": "Scores can look stable while candidate coverage, feature freshness, or user slices regress." },
+        { "text": "Join data freshness, candidate-source coverage, feature distributions, model outputs, and product metrics by version and slice", "feedback": "Correct. Cross-layer evidence is needed to localize an ML product regression." },
+        { "text": "Rollback the API service without checking the active model or policy version", "feedback": "That may change nothing and can erase useful evidence about the real release." },
+        { "text": "Wait for the next training run to see whether CTR recovers", "feedback": "Retraining is not a substitute for diagnosing data, serving, policy, or product changes." }
+      ],
+      "answer": 1,
+      "explanation": "ML observability spans inputs, retrieval, features, predictions, system health, decisions, and outcomes. Versions and slices connect those layers into a causal investigation.",
+      "followUp": "Which dashboards would help distinguish candidate-source loss from ranker drift within ten minutes?"
+    },
+    {
+      "sectionId": "protect-users-and-the-creator-ecosystem",
+      "prompt": "A new ranker increases watch time by repeatedly recommending sensational content from a small creator set. What should block launch?",
+      "options": [
+        { "text": "Nothing, because watch time is the north-star metric", "feedback": "A single engagement proxy does not price safety, concentration, satisfaction, or ecosystem harm." },
+        { "text": "Only a statistically significant decrease in click-through rate", "feedback": "CTR does not capture the reported concentration and content-quality risks." },
+        { "text": "Predefined safety, negative-feedback, concentration, and creator-coverage guardrails", "feedback": "Correct. Product constraints make harmful optimization visible before full rollout." },
+        { "text": "The absence of a larger neural model", "feedback": "Model class does not determine whether the product objective and policy are safe." }
+      ],
+      "answer": 2,
+      "explanation": "Recommendation systems allocate attention. Launch criteria must account for user welfare, policy, diversity, exposure concentration, and recovery paths alongside engagement.",
+      "followUp": "How would you measure creator concentration without guaranteeing equal exposure to low-quality inventory?"
+    },
+    {
+      "sectionId": "keep-the-low-level-serving-contract-testable",
+      "prompt": "A ranker release expects feature schema v8, but one serving cell still provides v7. What should prevent an unsafe score?",
+      "options": [
+        { "text": "The model should infer missing field meanings from their names", "feedback": "Implicit inference is not a compatibility guarantee and can silently corrupt predictions." },
+        { "text": "A versioned request contract and artifact compatibility check before activation", "feedback": "Correct. The cell should reject or fall back before an incompatible bundle reaches traffic." },
+        { "text": "A retry against the same incompatible cell", "feedback": "Retrying does not change the schema mismatch." },
+        { "text": "A lower ranking threshold", "feedback": "Threshold changes cannot repair features with different definitions or shapes." }
+      ],
+      "answer": 1,
+      "explanation": "The LLD should version feature schemas, model bundles, policy, candidate provenance, and response reasons. Compatibility tests make rollout failures deterministic rather than statistical surprises.",
+      "followUp": "Which fields would you include in a recommendation response to make a bad slate reproducible later?"
+    },
+    {
+      "sectionId": "what-worked-what-failed-and-when-to-evolve",
+      "prompt": "When should this recommendation architecture add another serving stage or service?",
+      "options": [
+        { "text": "Whenever a well-known company publishes a more complex design", "feedback": "Another company's scale and constraints do not prove a bottleneck in this system." },
+        { "text": "At the start of every quarter to keep the architecture modern", "feedback": "Calendar-driven complexity has no connection to user or operational evidence." },
+        { "text": "When measured quality, latency, scale, ownership, or failure isolation limits justify the added boundary", "feedback": "Correct. Evolution should answer an observed failure with explicit success criteria." },
+        { "text": "Only after the existing system has suffered a total outage", "feedback": "Leading indicators and controlled experiments should trigger change before catastrophic failure." }
+      ],
+      "answer": 2,
+      "explanation": "The system should evolve from baseline to personalized funnel to regional platform only when the current stage reaches a demonstrated limit. Every new component must earn its operational cost.",
+      "followUp": "What evidence would make you remove a stage rather than add another one?"
+    }
+  ]
+}

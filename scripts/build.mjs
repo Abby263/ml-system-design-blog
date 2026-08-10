@@ -91,6 +91,47 @@ const walkFiles = async (directory, prefix = "") => {
   return files;
 };
 
+const loadQuestions = async (directory, slug) => {
+  let payload;
+
+  try {
+    payload = JSON.parse(await readFile(path.join(directory, "questions.json"), "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw new Error(`Could not read questions for ${slug}: ${error.message}`);
+  }
+
+  if (!Array.isArray(payload.questions)) {
+    throw new Error(`${slug}/questions.json must contain a questions array`);
+  }
+
+  const seen = new Set();
+  payload.questions.forEach((question, questionIndex) => {
+    const location = `${slug}/questions.json question ${questionIndex + 1}`;
+    if (!question.sectionId || !/^[a-z0-9-]+$/.test(question.sectionId)) {
+      throw new Error(`${location} requires a kebab-case sectionId`);
+    }
+    if (seen.has(question.sectionId)) throw new Error(`${location} duplicates ${question.sectionId}`);
+    seen.add(question.sectionId);
+    if (!question.prompt || !question.explanation || !question.followUp) {
+      throw new Error(`${location} requires prompt, explanation, and followUp text`);
+    }
+    if (!Array.isArray(question.options) || question.options.length < 3 || question.options.length > 5) {
+      throw new Error(`${location} must provide three to five options`);
+    }
+    if (!Number.isInteger(question.answer) || question.answer < 0 || question.answer >= question.options.length) {
+      throw new Error(`${location} has an invalid answer index`);
+    }
+    question.options.forEach((option, optionIndex) => {
+      if (!option.text || !option.feedback) {
+        throw new Error(`${location} option ${optionIndex + 1} requires text and feedback`);
+      }
+    });
+  });
+
+  return payload.questions;
+};
+
 const loadBlogs = async () => {
   const entries = await readdir(BLOGS_DIR, { withFileTypes: true });
   const blogs = [];
@@ -105,8 +146,10 @@ const loadBlogs = async () => {
     const number = Number(entry.name.match(/^(\d+)/)?.[1] ?? blogs.length + 1);
     const codeDirectory = path.join(BLOGS_DIR, entry.name, "code");
     const assetsDirectory = path.join(BLOGS_DIR, entry.name, "assets");
+    const blogDirectory = path.join(BLOGS_DIR, entry.name);
     let codeFiles = [];
     let assetFiles = [];
+    const questions = await loadQuestions(blogDirectory, entry.name);
 
     try {
       codeFiles = await walkFiles(codeDirectory);
@@ -133,6 +176,7 @@ const loadBlogs = async () => {
       codeFiles,
       assetsDirectory,
       assetFiles,
+      questions,
       readTime: Math.max(1, Math.ceil(words / 220)),
     });
   }
@@ -257,6 +301,88 @@ const articleMarkdown = (source) =>
     .replace(/^\*([^\n]+)\*\n+/, "")
     .replace(/^## Table of Contents[\s\S]*?(?=^##\s)/m, "");
 
+const renderSectionCheck = (question, questionIndex, total, blogSlug) => {
+  const quizId = `${blogSlug}:${question.sectionId}`;
+  const optionLetters = "ABCDE";
+  const options = question.options
+    .map(
+      (option, optionIndex) => `
+        <label class="quiz-option" data-quiz-option>
+          <input type="radio" name="quiz-${blogSlug}-${question.sectionId}" value="${optionIndex}" data-feedback="${escapeHtml(option.feedback)}">
+          <span class="quiz-option-key" aria-hidden="true">${optionLetters[optionIndex]}</span>
+          <span class="quiz-option-text">${escapeHtml(option.text)}</span>
+          <span class="quiz-option-mark" aria-hidden="true"></span>
+        </label>`,
+    )
+    .join("");
+
+  return `
+    <section class="section-check" data-quiz data-quiz-id="${escapeHtml(quizId)}" data-answer="${question.answer}">
+      <div class="section-check-topline">
+        <span>Section check</span>
+        <span>${questionIndex + 1} / ${total}</span>
+      </div>
+      <form>
+        <fieldset>
+          <legend>${escapeHtml(question.prompt)}</legend>
+          <div class="quiz-options">${options}</div>
+        </fieldset>
+      </form>
+      <div class="quiz-feedback" data-quiz-feedback hidden tabindex="-1" aria-live="polite">
+        <strong data-quiz-result></strong>
+        <p data-quiz-option-feedback></p>
+        <p><b>Best answer:</b> <span data-quiz-best-answer></span></p>
+        <p>${escapeHtml(question.explanation)}</p>
+        <div class="quiz-follow-up"><span>Interviewer follow-up</span><p>${escapeHtml(question.followUp)}</p></div>
+        <button type="button" class="quiz-retry" data-quiz-retry>Try again</button>
+      </div>
+    </section>`;
+};
+
+const insertSectionChecks = (html, questions, blogSlug) => {
+  if (!questions.length) return html;
+
+  const sections = [...html.matchAll(/<h2 id="([^"]+)">/g)].map((match) => ({
+    id: match[1],
+    index: match.index,
+  }));
+  const sectionIds = new Set(sections.map((section) => section.id));
+  const questionBySection = new Map(
+    questions.map((question, questionIndex) => [question.sectionId, { question, questionIndex }]),
+  );
+
+  for (const question of questions) {
+    if (!sectionIds.has(question.sectionId)) {
+      throw new Error(`${blogSlug}/questions.json references missing section ${question.sectionId}`);
+    }
+  }
+
+  let result = html;
+  for (let sectionIndex = sections.length - 1; sectionIndex >= 0; sectionIndex -= 1) {
+    const section = sections[sectionIndex];
+    const entry = questionBySection.get(section.id);
+    if (!entry) continue;
+    const end = sectionIndex + 1 < sections.length ? sections[sectionIndex + 1].index : html.length;
+    const check = renderSectionCheck(entry.question, entry.questionIndex, questions.length, blogSlug);
+    result = `${result.slice(0, end)}${check}${result.slice(end)}`;
+  }
+
+  return result;
+};
+
+const quizOverview = (blog) =>
+  blog.questions.length
+    ? `<section class="quiz-overview" data-quiz-summary data-quiz-storage="dml-quiz-v1:${escapeHtml(blog.slug)}">
+        <div><span class="eyebrow">KNOWLEDGE CHECKS</span><strong>Test the design decisions.</strong></div>
+        <div class="quiz-overview-score">
+          <span><b data-quiz-answered>0</b> / ${blog.questions.length} completed</span>
+          <span><b data-quiz-correct>0</b> correct</span>
+        </div>
+        <div class="quiz-progress-track" aria-hidden="true"><span data-quiz-progress></span></div>
+        <button type="button" data-quiz-reset disabled>Reset answers</button>
+      </section>`
+    : "";
+
 const fileIcon = (file) => {
   const extension = path.extname(file).toLowerCase();
   if ([".md", ".mdx"].includes(extension)) return "MD";
@@ -376,6 +502,7 @@ const blogsPage = (blogs) =>
 const articlePage = (blog, previous, next) => {
   const content = articleMarkdown(blog.source);
   const headings = extractHeadings(content);
+  const renderedContent = insertSectionChecks(renderMarkdown(content), blog.questions, blog.slug);
   const sourceUrl = `${GITHUB_URL}/blob/main/blogs/${blog.slug}/README.md`;
   const toc = headings
     .filter((heading) => heading.level === 2)
@@ -396,6 +523,7 @@ const articlePage = (blog, previous, next) => {
           <p>${escapeHtml(blog.subtitle)}</p>
           <div class="article-meta"><span>${blog.readTime} min read</span><span>${blog.codeFiles.length} companion ${blog.codeFiles.length === 1 ? "file" : "files"}</span><a href="${sourceUrl}" target="_blank" rel="noreferrer">Edit on GitHub ↗</a></div>
         </header>
+        ${quizOverview(blog)}
         <details class="mobile-toc" data-mobile-toc>
           <summary>
             <span class="mobile-toc-kicker">On this page</span>
@@ -406,7 +534,7 @@ const articlePage = (blog, previous, next) => {
         </details>
         <div class="article-layout">
           <aside class="article-toc"><p>On this page</p>${toc}</aside>
-          <div class="article-content prose">${renderMarkdown(content)}</div>
+          <div class="article-content prose">${renderedContent}</div>
           <aside class="article-aside">
             <div class="aside-card"><span class="eyebrow">COMPANION REPO</span><h3>Read the source.</h3><p>Browse runnable code, configuration, tests, and notes for this essay.</p><a class="button button-primary" href="/blogs/${blog.slug}/code/">Open code <span>→</span></a></div>
           </aside>

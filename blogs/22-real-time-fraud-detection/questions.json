@@ -1,0 +1,290 @@
+{
+  "questions": [
+    {
+      "sectionId": "clarify-the-fraud-surface-and-action-deadline",
+      "prompt": "A payment team asks for a fraud model but mixes checkout authorization, account takeover investigation, and weekly merchant review. What should you clarify first?",
+      "options": [
+        { "text": "Use one score and one latency target for every workflow", "feedback": "These workflows have different entities, actions, labels, and decision deadlines; forcing one contract hides those differences." },
+        { "text": "Define each decision surface, protected entity, available evidence, action, and deadline", "feedback": "Correct. The synchronous checkout path and asynchronous investigation path can then use appropriate models and architecture." },
+        { "text": "Start with the largest historical fraud dataset", "feedback": "More data does not resolve which decision is being made or what evidence exists at that moment." },
+        { "text": "Treat every alert as a declined transaction", "feedback": "Investigation alerts and authorization actions have different costs and operational consequences." }
+      ],
+      "answer": 1,
+      "explanation": "Fraud detection is a family of decisions, not one generic prediction task. The action deadline determines which features and dependencies can safely sit on the synchronous path.",
+      "followUp": "Which signals would you allow for a 100 ms authorization decision but reserve for a ten-minute analyst investigation?"
+    },
+    {
+      "sectionId": "optimize-expected-loss-not-accuracy",
+      "prompt": "Two transactions both receive a 0.8 fraud probability: one is $8 and the other is $8,000. Should the policy necessarily take the same action?",
+      "options": [
+        { "text": "Yes, because calibrated probabilities map to one universal threshold", "feedback": "A probability alone omits transaction value, recovery, customer friction, and review capacity." },
+        { "text": "No; choose the action that minimizes expected fraud loss, friction, review cost, and downstream harm", "feedback": "Correct. Policy combines calibrated risk with the asymmetric cost of each possible action." },
+        { "text": "Yes, because amount should never influence fraud decisions", "feedback": "Amount can legitimately change expected economic loss even when the underlying probability is identical." },
+        { "text": "No; automatically decline only the larger transaction", "feedback": "Amount matters, but a fixed amount rule still ignores risk, verification options, customer value, and recovery." }
+      ],
+      "answer": 1,
+      "explanation": "Accuracy treats every outcome equally, while fraud decisions have asymmetric and context-dependent costs. Expected-loss policy makes those trade-offs explicit.",
+      "followUp": "How would you incorporate a limited manual-review budget into the action policy?"
+    },
+    {
+      "sectionId": "size-the-synchronous-path",
+      "prompt": "The authorization service has a 150 ms p99 budget and needs device, velocity, and account signals. How should dependencies be called?",
+      "options": [
+        { "text": "Call them sequentially and retry each one until it succeeds", "feedback": "Sequential calls consume the deadline, and retries can amplify an outage into a retry storm." },
+        { "text": "Fetch independent signals in parallel with child deadlines, bounded fallbacks, and cancellation", "feedback": "Correct. Parallel bounded work protects both latency and graceful degradation." },
+        { "text": "Wait for every feature because a partial vector is always invalid", "feedback": "Production models should define missingness behavior for optional signals rather than turn one dependency into total unavailability." },
+        { "text": "Move the complete data warehouse query into checkout", "feedback": "An analytical query engine is not designed to provide predictable low-latency request-time state." }
+      ],
+      "answer": 1,
+      "explanation": "The end-to-end deadline must be partitioned across network, feature, model, and policy stages. Dependencies need explicit timeouts and tested degradation behavior.",
+      "followUp": "If the device signal consumes 90 ms at p99, would you optimize it, cache it, or remove it from the critical path?"
+    },
+    {
+      "sectionId": "scenario-1-rules-plus-a-tabular-model",
+      "prompt": "A small marketplace has useful transaction tables, known abuse patterns, and only weeks to ship. What is the strongest first production design?",
+      "options": [
+        { "text": "Only hard-coded rules, because learned models cannot be explained", "feedback": "Rules are useful for known invariants but become brittle and miss nonlinear combinations across signals." },
+        { "text": "A rules layer plus a calibrated boosted-tree model and an explicit action policy", "feedback": "Correct. Rules cover known hard constraints while the model learns combinations; policy keeps business costs separate." },
+        { "text": "A graph neural network trained before entity links are reliable", "feedback": "The data and operational maturity do not yet justify graph-model complexity." },
+        { "text": "A deep sequence model with no fallback", "feedback": "This adds serving and data risk before a simpler baseline establishes measurable value." }
+      ],
+      "answer": 1,
+      "explanation": "A practical first fraud system combines deterministic knowledge with a strong tabular baseline. It is fast to ship, observable, and easy to compare against later complexity.",
+      "followUp": "Which rule should remain outside the model even after the learned system becomes strong?"
+    },
+    {
+      "sectionId": "design-the-event-and-decision-contracts",
+      "prompt": "A client retries the same payment request after a timeout. The payload is unchanged. What should the fraud decision API do?",
+      "options": [
+        { "text": "Score it again with whatever model is currently active", "feedback": "A retry could then receive a different action and double-count velocity state." },
+        { "text": "Return the original versioned decision for that idempotency key", "feedback": "Correct. The same logical request should produce one auditable decision and one state mutation." },
+        { "text": "Decline every retry as suspicious", "feedback": "Normal network retries are not evidence of fraud and this would create avoidable customer harm." },
+        { "text": "Create a new transaction identifier for the retry", "feedback": "That defeats deduplication and can inflate both payment and feature counts." }
+      ],
+      "answer": 1,
+      "explanation": "Idempotency is part of model correctness. The decision ledger should bind request identity and payload to the feature, model, policy, and response versions used.",
+      "followUp": "What should happen if the same idempotency key arrives with a different amount or account?"
+    },
+    {
+      "sectionId": "build-labels-without-pretending-every-decline-is-fraud",
+      "prompt": "A transaction was blocked by the current system, so no chargeback can ever arrive. Can it safely be labeled as fraud for training?",
+      "options": [
+        { "text": "Yes, because the production policy declined it", "feedback": "That trains the model to reproduce its own historical policy and mistakes." },
+        { "text": "No; it is a censored outcome and needs a distinct label state or carefully designed exploration", "feedback": "Correct. The true outcome is unobserved because the intervention prevented it." },
+        { "text": "Yes, if the transaction amount was above average", "feedback": "Amount does not reveal the missing counterfactual outcome." },
+        { "text": "No; remove all declined events from every dataset", "feedback": "Discarding them loses policy and exposure context needed to understand selection bias and coverage." }
+      ],
+      "answer": 1,
+      "explanation": "Fraud labels are delayed, incomplete, and policy-dependent. Chargebacks, confirmed good outcomes, analyst decisions, and censored events should remain distinguishable with provenance.",
+      "followUp": "How would you obtain trustworthy outcomes for a narrow band of uncertain transactions without exposing the business to unlimited loss?"
+    },
+    {
+      "sectionId": "evaluate-chronologically-under-extreme-imbalance",
+      "prompt": "A random split reports 99.8% accuracy on a dataset with 0.2% fraud. What evaluation would better predict production value?",
+      "options": [
+        { "text": "Keep accuracy but report it to four decimal places", "feedback": "Precision does not make a metric informative when predicting every event as legitimate is already highly accurate." },
+        { "text": "Use chronological backtests with precision-recall, recall at review capacity, calibration, and expected cost", "feedback": "Correct. This reflects class imbalance, delayed deployment, operating constraints, and asymmetric harm." },
+        { "text": "Use a random split and ROC AUC alone", "feedback": "ROC AUC can look strong under extreme imbalance and a random split can leak recurring entities and future behavior." },
+        { "text": "Balance the test set to 50/50 and report raw precision", "feedback": "Changing prevalence makes precision unlike the production environment unless it is carefully reweighted." }
+      ],
+      "answer": 1,
+      "explanation": "Fraud evaluation must simulate a future deployment window and the real base rate. Metrics should connect ranking and calibration to actual decisions and capacity.",
+      "followUp": "How would you backtest when confirmed chargebacks arrive 30 to 90 days after the transaction?"
+    },
+    {
+      "sectionId": "engineer-features-by-freshness-and-attack-cost",
+      "prompt": "Which feature is safest to compute synchronously during authorization?",
+      "options": [
+        { "text": "A full two-year warehouse join across all merchant activity", "feedback": "The access pattern is too expensive and unpredictable for a tight synchronous deadline." },
+        { "text": "A bounded, pre-aggregated velocity counter with event-time and freshness metadata", "feedback": "Correct. It offers recent behavioral evidence with a predictable read and explicit staleness semantics." },
+        { "text": "A feature copied from an analyst notebook with no ownership", "feedback": "An ungoverned calculation creates training-serving skew and cannot support reliable incident response." },
+        { "text": "The transaction identifier hashed into a large integer", "feedback": "A near-unique identifier encourages memorization and is easy for attackers to evade." }
+      ],
+      "answer": 1,
+      "explanation": "Features should be classified by freshness, serving cost, reliability, and how easily an attacker can manipulate them. Online state needs explicit source time and fallback behavior.",
+      "followUp": "Which feature would you remove first if attackers can cheaply reset it by creating a new account?"
+    },
+    {
+      "sectionId": "choose-the-first-model-deliberately",
+      "prompt": "You have heterogeneous tabular data, missing values, nonlinear interactions, CPU serving, and limited training history. Which first model is most defensible?",
+      "options": [
+        { "text": "A calibrated gradient-boosted tree model", "feedback": "Correct. It is strong on tabular data, fast to serve, debuggable, and establishes a hard baseline." },
+        { "text": "A giant language model prompted with transaction JSON", "feedback": "This adds cost, latency, and governance risk without matching the structured-data problem." },
+        { "text": "A graph neural network before graph features have proven useful", "feedback": "A graph model is premature without reliable entity resolution and measured graph-signal value." },
+        { "text": "One logistic-regression model per merchant", "feedback": "Small tenants will have sparse labels, and per-merchant releases become operationally unmanageable." }
+      ],
+      "answer": 0,
+      "explanation": "Model choice should match data shape and serving constraints. Boosted trees are usually a high-value first step; complexity is added only for a measured limitation.",
+      "followUp": "What production evidence would justify adding a sequence model rather than more reliable velocity features?"
+    },
+    {
+      "sectionId": "put-policy-after-prediction",
+      "prompt": "The model emits a calibrated fraud probability. Why should it not directly emit approve, review, or decline?",
+      "options": [
+        { "text": "Because models cannot output categorical values", "feedback": "Models can output categories; the concern is coupling prediction to changing business constraints." },
+        { "text": "Because action thresholds depend on amount, friction, review capacity, regulation, and tenant policy", "feedback": "Correct. Separating risk estimation from policy lets actions change without retraining the model." },
+        { "text": "Because every transaction must first go to an analyst", "feedback": "Review capacity is scarce and cannot sit in every decision path." },
+        { "text": "Because only deterministic rules may decline payments", "feedback": "Learned risk can inform decline policy when governance, calibration, and review controls are adequate." }
+      ],
+      "answer": 1,
+      "explanation": "Prediction estimates risk; policy chooses an action under costs and constraints. This separation improves calibration use, auditing, and controlled policy changes.",
+      "followUp": "How would the policy adapt automatically when the analyst queue is near capacity?"
+    },
+    {
+      "sectionId": "scenario-2-add-streaming-state-and-separate-the-decision-plane",
+      "prompt": "Fraudsters now burst through many accounts within minutes, and batch aggregates are six hours stale. Which evolution directly addresses the measured gap?",
+      "options": [
+        { "text": "Retrain the same model every hour on the stale feature table", "feedback": "More frequent training cannot create state that is missing at decision time." },
+        { "text": "Add event-stream processing and an online state store behind a versioned decision service", "feedback": "Correct. Streaming state exposes recent velocity while the decision service owns bounded scoring and policy." },
+        { "text": "Move all historical analytics into the request handler", "feedback": "This turns a freshness problem into an unbounded latency and availability problem." },
+        { "text": "Split every batch job into a separate microservice", "feedback": "Service count does not make state fresher or correct under concurrent updates." }
+      ],
+      "answer": 1,
+      "explanation": "Streaming architecture is justified when stale evidence causes measurable loss. A separate decision plane creates a stable synchronous contract while state evolves independently.",
+      "followUp": "Which latency, ownership, or scaling boundary would justify extracting the feature service from the decision service?"
+    },
+    {
+      "sectionId": "make-velocity-features-correct-under-retries-and-races",
+      "prompt": "Two requests for the same card arrive concurrently, and one is retried. How do you prevent the ten-minute count from becoming three?",
+      "options": [
+        { "text": "Read the count, increment it in application memory, then write it back", "feedback": "Concurrent read-modify-write operations can lose or duplicate updates." },
+        { "text": "Atomically deduplicate the event and update windowed state using its stable event identity", "feedback": "Correct. Deduplication and state mutation must share clear atomicity or processing guarantees." },
+        { "text": "Round every event timestamp to the nearest day", "feedback": "That removes useful velocity resolution without fixing duplicate processing." },
+        { "text": "Ignore retries because the payment gateway will handle them", "feedback": "The risk system still observes deliveries and must defend its own derived state." }
+      ],
+      "answer": 1,
+      "explanation": "Velocity features are distributed state, not simple counters. Correct event identity, window semantics, deduplication, and atomic updates are essential to model correctness.",
+      "followUp": "How should late events change an event-time window without rewriting a decision that has already been returned?"
+    },
+    {
+      "sectionId": "add-graph-evidence-without-putting-graph-traversal-on-checkout",
+      "prompt": "Shared devices and bank accounts reveal fraud rings, but a multi-hop graph query takes 400 ms at p99. How should the signal reach checkout?",
+      "options": [
+        { "text": "Run the full traversal synchronously and extend the checkout deadline", "feedback": "Unbounded traversal makes latency and availability depend on graph size and load." },
+        { "text": "Precompute bounded graph features or cluster risk and serve them from a low-latency cache", "feedback": "Correct. Heavy graph work stays asynchronous while compact versioned evidence enters the request path." },
+        { "text": "Remove all graph information from the system", "feedback": "The signal is useful; it needs a serving form compatible with the deadline." },
+        { "text": "Decline any transaction that shares one identifier", "feedback": "Common devices and addresses create legitimate sharing, so a hard rule can cause severe false positives." }
+      ],
+      "answer": 1,
+      "explanation": "Graph evidence can be valuable without an online graph database traversal. Precomputed bounded features make latency, freshness, and failure behavior explicit.",
+      "followUp": "How would you prevent one compromised high-degree entity from contaminating an entire connected component?"
+    },
+    {
+      "sectionId": "use-analysts-as-a-scarce-labeling-instrument",
+      "prompt": "The review queue is full. Which events should the system prioritize for analysts?",
+      "options": [
+        { "text": "Only the highest model scores", "feedback": "Those cases may already be obvious and provide little information about uncertain boundaries." },
+        { "text": "A capacity-aware mix of high expected-loss, uncertain, novel, and audit-sampled cases", "feedback": "Correct. The queue must protect the business while also improving coverage and label quality." },
+        { "text": "A random sample of all legitimate transactions", "feedback": "Random audits help estimate bias, but using the whole queue this way ignores immediate expected loss." },
+        { "text": "Cases from the largest tenant only", "feedback": "That starves smaller tenants and can make the training set unrepresentative." }
+      ],
+      "answer": 1,
+      "explanation": "Analyst attention is both an intervention and a labeling budget. Queue policy should balance risk, uncertainty, novelty, fairness, and random audits while preserving label provenance.",
+      "followUp": "Why are analyst labels not automatically unbiased ground truth, and how would you measure reviewer disagreement?"
+    },
+    {
+      "sectionId": "train-promote-shadow-and-roll-back-safely",
+      "prompt": "A new model improves chronological expected cost offline but uses a new feature source. What is the safest release sequence?",
+      "options": [
+        { "text": "Replace the production model immediately to avoid stale concepts", "feedback": "Offline gain does not validate the new source's availability, parity, latency, or live score behavior." },
+        { "text": "Validate artifacts and replay, shadow live traffic, canary actions, then expand with automatic rollback", "feedback": "Correct. These gates isolate data, system, and product risks before broad exposure." },
+        { "text": "Run both models and always choose the higher risk score", "feedback": "This creates an uncalibrated action policy and does not constitute a controlled experiment." },
+        { "text": "Canary only on transactions the old model already declines", "feedback": "That selected cohort cannot reveal false declines or behavior across the operating range." }
+      ],
+      "answer": 1,
+      "explanation": "Fraud releases must validate data contracts, serving performance, calibration, action rates, and business harm. Versioned rollback should restore model and policy together.",
+      "followUp": "Which fast signals can trigger rollback before delayed chargeback labels become available?"
+    },
+    {
+      "sectionId": "survive-missing-features-model-failure-and-regional-loss",
+      "prompt": "The online feature store times out during checkout. What is the best universal response?",
+      "options": [
+        { "text": "Approve every transaction to preserve conversion", "feedback": "This can expose the business to unbounded fraud during an outage." },
+        { "text": "Decline every transaction to eliminate fraud", "feedback": "This converts an internal outage into broad customer and revenue harm." },
+        { "text": "Use a tested degraded policy based on available risk, amount, feature freshness, and verification options", "feedback": "Correct. Degradation should be explicit, tiered, observable, and matched to expected loss." },
+        { "text": "Retry without a deadline until the feature store recovers", "feedback": "Unbounded retries violate checkout latency and can worsen the dependency outage." }
+      ],
+      "answer": 2,
+      "explanation": "Fail-open and fail-closed are business decisions, not universal technical defaults. A risk-tiered fallback can use cached state, rules, step-up verification, or selective review.",
+      "followUp": "Which transactions would you fail open, step up, or fail closed during a 15-minute regional feature outage?"
+    },
+    {
+      "sectionId": "scenario-3-build-a-global-multi-tenant-risk-platform",
+      "prompt": "A global fraud platform serves many merchants, and one tenant's traffic spike threatens every other tenant. Which design best limits the blast radius?",
+      "options": [
+        { "text": "One global queue and one shared state partition for maximum utilization", "feedback": "A noisy tenant can exhaust shared capacity and create a global failure domain." },
+        { "text": "Regional cells with tenant quotas, partitioned state, and globally distributed versioned artifacts", "feedback": "Correct. Cells keep the synchronous path local while quotas and partitioning provide tenant isolation." },
+        { "text": "A separate handwritten codebase for every merchant", "feedback": "This creates release drift and makes platform correctness impossible to maintain." },
+        { "text": "Send all requests to whichever region is cheapest at that moment", "feedback": "Cost-based cross-region routing can violate data residency and add unstable network latency." }
+      ],
+      "answer": 1,
+      "explanation": "Global multi-tenant systems need explicit isolation across compute, state, policy, and observability. Regional cells reduce WAN dependency and contain failures.",
+      "followUp": "Which components belong in the global control plane, and which must remain inside each regional data plane?"
+    },
+    {
+      "sectionId": "map-the-design-to-aws-and-google-cloud",
+      "prompt": "How should you compare AWS and Google Cloud implementations of the fraud platform?",
+      "options": [
+        { "text": "Choose whichever provider has more services on its architecture diagram", "feedback": "Service count does not establish the required latency, ordering, or failure guarantees." },
+        { "text": "Map stable responsibilities and guarantees to each provider's managed primitives", "feedback": "Correct. Event ingestion, state, serving, training, registry, and observability should be compared by contract." },
+        { "text": "Use the analytical warehouse as the synchronous feature store on both clouds", "feedback": "Warehouses serve a different access pattern and do not guarantee request-time tail latency." },
+        { "text": "Require identical product names before approving a migration", "feedback": "Clouds expose different primitives; equivalence comes from behavior and responsibility, not naming." }
+      ],
+      "answer": 1,
+      "explanation": "A portable design is expressed in responsibilities, data contracts, latency, consistency, and recovery objectives. Vendor services are concrete implementations of those requirements.",
+      "followUp": "Which stateful component would be hardest to migrate, and what contract would reduce that coupling?"
+    },
+    {
+      "sectionId": "keep-the-lld-contracts-auditable",
+      "prompt": "A customer disputes a decline from six weeks ago. What information must be recoverable to reproduce the decision?",
+      "options": [
+        { "text": "Only the final fraud probability", "feedback": "A score cannot explain which request, evidence, versions, or policy produced the action." },
+        { "text": "The immutable request, feature snapshot or references, model version, policy version, rules, and final action", "feedback": "Correct. This is the minimum lineage needed for exact replay and audit." },
+        { "text": "The current model and today's feature values", "feedback": "Current state may differ materially from what the service knew at decision time." },
+        { "text": "The analyst's latest note about the account", "feedback": "Later human context can help investigation but cannot reconstruct the original machine decision." }
+      ],
+      "answer": 1,
+      "explanation": "Auditability is a low-level contract across idempotency, versioning, timestamps, feature provenance, and decision persistence. Logs alone are not guaranteed replay records.",
+      "followUp": "How would you preserve reproducibility when online feature values are too large to store with every decision?"
+    },
+    {
+      "sectionId": "monitor-adversaries-operations-and-business-harm-together",
+      "prompt": "Chargeback rate is unchanged, but approval rate drops sharply after a release. Should monitoring consider the system healthy?",
+      "options": [
+        { "text": "Yes, because fraud loss is the only metric that matters", "feedback": "Stable delayed fraud labels can hide immediate false-decline and conversion harm." },
+        { "text": "No; inspect action rates, friction, latency, feature health, score drift, queue load, and sliced outcomes", "feedback": "Correct. System, model, operations, and business signals must be interpreted together." },
+        { "text": "Yes, if CPU utilization is below 50%", "feedback": "Infrastructure capacity says nothing about decision quality or customer harm." },
+        { "text": "No; roll back whenever any metric moves at all", "feedback": "Expected variation needs thresholds and causal comparison; not every movement is a regression." }
+      ],
+      "answer": 1,
+      "explanation": "Fraud labels arrive late and adversaries adapt. Fast proxies and operational metrics detect immediate failures, while mature outcomes close the loop later.",
+      "followUp": "How would you distinguish a fraud attack from a broken feature pipeline when both cause score drift?"
+    },
+    {
+      "sectionId": "protect-privacy-and-measure-uneven-harm",
+      "prompt": "A device identifier improves recall but creates privacy and disparate false-decline concerns. What is the responsible next step?",
+      "options": [
+        { "text": "Keep raw identifiers forever because fraud prevention overrides all other concerns", "feedback": "Unlimited collection and retention increase privacy, security, and compliance risk." },
+        { "text": "Minimize and tokenize the data, set retention and access controls, then measure errors and recovery by relevant slices", "feedback": "Correct. Useful risk evidence still needs purpose limitation, governance, and harm monitoring." },
+        { "text": "Remove every feature correlated with any user group", "feedback": "Blind removal can reduce protection and does not guarantee fair outcomes because proxies remain." },
+        { "text": "Measure only aggregate model accuracy so sensitive attributes are never processed", "feedback": "Aggregate metrics can conceal severe uneven false declines; controlled auditing may require protected or proxy slice data." }
+      ],
+      "answer": 1,
+      "explanation": "Privacy and fairness are system properties. Data minimization, tokenization, retention, access, slice evaluation, and accessible appeals all affect real-world harm.",
+      "followUp": "How would you audit uneven false declines when collecting protected attributes is restricted?"
+    },
+    {
+      "sectionId": "what-worked-what-failed-and-when-to-evolve",
+      "prompt": "The current rules-plus-tree system meets loss, latency, and review goals. An engineer proposes streaming graph microservices because leading companies use them. What is the best decision?",
+      "options": [
+        { "text": "Adopt them now because mature systems should look architecturally sophisticated", "feedback": "Complexity without a measured bottleneck adds failure modes and slows iteration." },
+        { "text": "Keep the simpler design and add complexity only when a measured attack, freshness, scale, or ownership gap demands it", "feedback": "Correct. Architecture should evolve from evidence while preserving baselines and rollback paths." },
+        { "text": "Never change the system once it reaches its first goals", "feedback": "Attackers and product scale evolve; justified changes will eventually be necessary." },
+        { "text": "Replace the model first and decide which problem it solves afterward", "feedback": "This reverses the design process and makes success impossible to evaluate honestly." }
+      ],
+      "answer": 1,
+      "explanation": "The scalable approach is evolutionary: start with clear contracts and a strong baseline, measure failure modes, then introduce streaming, graph, services, or global cells for specific constraints.",
+      "followUp": "Name one metric that would justify each next step: streaming state, graph evidence, service extraction, and a new regional cell."
+    }
+  ]
+}
