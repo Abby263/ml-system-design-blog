@@ -444,6 +444,11 @@ Start with logistic regression as a calibration and pipeline baseline, then a gr
 
 A deeper network becomes attractive when there is enough network-scale data, learned entity embeddings, or sequential behavior that hand-aggregated features miss. A graph neural network becomes attractive when coordinated relationships are a dominant signal. Neither automatically replaces the tabular model: Airbnb published that offline SIGN graph embeddings became valuable downstream features while keeping the real-time trust models simple, and Stripe has described combining large network-level signal sets with rules and interventions.
 
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Fraud is fundamentally relational — rings share devices, cards, and addresses. Why not start with a graph neural network instead of a tree model?</p>
+  <p><strong>Candidate</strong> A GNN adds training complexity, embedding freshness problems, and inference cost before I've shown the simpler model can't handle it. I'd rather ship the tabular model, add relational counts as ordinary features, and only reach for a graph-native model once replay shows that coordinated rings are slipping past everything else. That's also why Airbnb's public write-up computes graph embeddings offline and feeds them into a simple online model rather than serving graph inference live.</p>
+</aside>
+
 What often fails:
 
 - **One giant deep model immediately:** harder to calibrate, debug, and serve; gains may disappear against a strong tree baseline.
@@ -492,6 +497,11 @@ EXPIRES 2026-08-17T00:00:00Z
 ```
 
 Its lifecycle is: author with owner, reason, scope, and expiry; statically validate fields and types; reject unsafe complexity or fan-out; replay on historical traffic; dry-run or shadow on live traffic; canary by tenant or region; activate; monitor match rate, precision, false declines, and queue impact; then auto-expire or remove it with a kill switch. A rule compiler can represent conditions as an abstract syntax tree, but the important contract is deterministic evaluation against a pinned rule-set version.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Realistically, incident rules get written under pressure at 2 a.m. Won't the expiry field just get set to some far-off date and forgotten?</p>
+  <p><strong>Candidate</strong> That's exactly why expiry can't be a courtesy field — it needs to be enforced the way a certificate expiry is. An emergency rule should default to a short expiry, page its owner before it lapses, and require a deliberate renewal with a reason, not a silent extension. A rule with no owner or an expiry years out should fail validation the same way a malformed schema would.</p>
+</aside>
 
 Rules and model inference can run concurrently after their required inputs are available. They return evidence—not the final customer action. The deterministic policy resolves legal hard blocks, model risk, challenge availability, merchant policy, and review capacity in one place. Analysts receive stable reason codes and bounded contributing factors; customers receive useful recovery guidance. Neither should receive a raw SHAP dump or exact attack thresholds that turn explanations into an evasion guide.
 
@@ -620,6 +630,11 @@ Move toward GraphSAGE-style inductive embeddings, sampled online neighborhoods, 
 
 Protect against guilt by association. Shared Wi-Fi, family devices, corporate cards, apartment addresses, and mobile carrier IPs create legitimate high-degree nodes. Downweight common entities, track edge semantics and timestamps, cap neighbor influence, and require non-graph evidence before severe action.
 
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> If a device is shared by three accounts and one turns out to be fraudulent, isn't flagging the other two exactly what the graph is for?</p>
+  <p><strong>Candidate</strong> It's evidence, not a verdict. A family tablet or a corporate card can legitimately touch a dozen accounts, so raw shared-entity count would flag ordinary households as often as rings. I cap how much influence one shared node contributes, weight it down as its degree grows, and require the graph signal to combine with independent evidence before it can push a decision past challenge — a shared device alone should never reach block.</p>
+</aside>
+
 ## Use Analysts as a Scarce Labeling Instrument
 
 Manual review is not a failure fallback; it is a constrained sensor and intervention.
@@ -638,6 +653,11 @@ The case view includes:
 - an appeal and correction trail.
 
 Sample some low-risk and recently changed slices for review. Otherwise analysts only label what the old system already suspects, and blind spots remain invisible. Active learning can prioritize uncertain or novel examples, but reserve random audit capacity to estimate real prevalence and selection bias.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> The model already scores every transaction. What does a human reviewer actually add?</p>
+  <p><strong>Candidate</strong> A model trained on past decisions can only be as good as the labels it was given, and analysts are one of the few sources of labels the current model didn't produce itself. They catch novel patterns the model has never seen, absorb ambiguous cases that shouldn't be resolved by a threshold, and — if I sample some of their queue at random instead of only the model's top scores — tell me what the model is confidently missing.</p>
+</aside>
 
 LLMs can summarize case evidence or normalize analyst notes, but should not silently invent ground truth. Google researchers have published an LLM-assisted scam-review approach; its proper role in this design is reviewer augmentation with cited evidence, not an unreviewed authorization dependency.
 
@@ -701,6 +721,11 @@ Design degradation before the first outage:
 | Regional feature store lost | Region-local last-known-good snapshots | Tighten only policies proven safe |
 
 A universal fail-open leaks money during attacks; a universal fail-closed becomes a self-inflicted denial of service. The correct fallback depends on amount, reversibility, customer tenure, challenge availability, merchant risk appetite, and regulatory constraints.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> When the model server is down, why not just block everything until it comes back? That sounds safest.</p>
+  <p><strong>Candidate</strong> Safest for fraud loss, but it turns one dependency outage into a full payment outage — every legitimate customer gets declined along with every attacker. I fall back to deterministic rules and a cached baseline instead, sized to the actual risk: known-low-risk traffic keeps flowing, ambiguous traffic gets challenged rather than blocked, and only traffic that a hard rule already covers gets blocked outright. "Safe" here means bounded loss on both sides, not zero fraud loss.</p>
+</aside>
 
 For example:
 
@@ -870,6 +895,11 @@ Product/operations metrics:
 - prevented loss and customer friction by segment.
 
 Alert on combinations. A falling fraud rate plus a falling approval rate may mean an over-aggressive policy. A sudden score drop plus stale velocity features is likely infrastructure, not safer traffic. A stable global PR-AUC can hide a new attack in one region or merchant category.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> If your global PR-AUC dashboard looks flat and healthy, doesn't that mean the model is doing fine?</p>
+  <p><strong>Candidate</strong> Not necessarily — a global average can hide a regional fire. A new attack concentrated in one merchant category or country can double the local fraud rate while barely moving a metric computed over the whole portfolio. That's why I slice PR-AUC and calibration by region, merchant category, and tenure rather than trusting one aggregate number to represent every population the model actually serves.</p>
+</aside>
 
 Adversarial monitoring adds canary entities, synthetic attack replays, rate-limited red-team traffic, rule probing detection, and survival analysis for newly observed campaigns. Protect exact thresholds and high-value feature logic as sensitive security configuration; explanations to customers should be useful without becoming an evasion manual.
 
