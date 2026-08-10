@@ -1,0 +1,24 @@
+services:
+  trainer:
+    build: .
+    command: fraud-train --output /artifacts/model.json
+    volumes:
+      - fraud-artifacts:/artifacts
+
+  api:
+    build: .
+    environment:
+      ARTIFACT_PATH: /artifacts/model.json
+      DATABASE_PATH: /state/fraud.db
+    depends_on:
+      trainer:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    volumes:
+      - fraud-artifacts:/artifacts:ro
+      - fraud-state:/state
+
+volumes:
+  fraud-artifacts:
+  fraud-state:

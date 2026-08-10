@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Fraud action cost landscape</title>
+  <desc id="desc">A calibrated risk axis is divided into allow, challenge, review, and block bands while cost curves illustrate changing fraud loss and customer friction.</desc>
+  <defs>
+    <style>.bg{fill:#fafaf5}.ink{fill:#11120f}.blue{fill:#8da8ff}.lime{fill:#d9ff63}.gray{fill:#dedfd8}.axis{stroke:#11120f;stroke-width:3}.grid{stroke:#d4d5ce;stroke-width:2}.fraud{stroke:#e84a3a;stroke-width:7;fill:none}.friction{stroke:#526fd6;stroke-width:7;fill:none}.total{stroke:#11120f;stroke-width:8;fill:none}.cut{stroke:#11120f;stroke-width:2;stroke-dasharray:9 8}.k{font:700 14px ui-monospace,monospace;letter-spacing:2px;fill:#66695f}.h{font:700 32px Inter,Arial,sans-serif;fill:#11120f}.t{font:800 19px Inter,Arial,sans-serif;fill:#11120f}.s{font:500 14px Inter,Arial,sans-serif;fill:#55584f}.n{font:800 26px Inter,Arial,sans-serif;fill:#11120f}</style>
+  </defs>
+  <rect class="bg" width="1600" height="1040"/>
+  <text class="k" x="55" y="48">POLICY SURFACE &#xB7; CALIBRATED RISK BECOMES AN INTERVENTION</text>
+  <text class="h" x="55" y="96">The cheapest action changes as expected fraud loss rises.</text>
+  <g transform="translate(170 180)">
+    <line class="grid" x1="0" y1="120" x2="1250" y2="120"/>
+    <line class="grid" x1="0" y1="260" x2="1250" y2="260"/>
+    <line class="grid" x1="0" y1="400" x2="1250" y2="400"/>
+    <line class="axis" x1="0" y1="540" x2="1250" y2="540"/>
+    <line class="axis" x1="0" y1="0" x2="0" y2="540"/>
+    <text class="k" x="625" y="585" text-anchor="middle">CALIBRATED P(FRAUD) &#x2192;</text>
+    <text class="k" transform="translate(-85 270) rotate(-90)" text-anchor="middle">EXPECTED COST</text>
+    <path class="fraud" d="M0 65C270 90 480 160 670 260S1000 440 1250 515"/>
+    <path class="friction" d="M0 515C290 500 520 420 720 305S1030 115 1250 70"/>
+    <path class="total" d="M0 275C230 245 400 225 540 235S730 285 830 270S1040 215 1250 250"/>
+    <text class="s" x="1060" y="470" fill="#e84a3a">fraud allowed</text>
+    <text class="s" x="1050" y="95" fill="#526fd6">legitimate friction</text>
+    <text class="t" x="990" y="240">policy-adjusted cost</text>
+    <line class="cut" x1="280" y1="0" x2="280" y2="540"/>
+    <line class="cut" x1="610" y1="0" x2="610" y2="540"/>
+    <line class="cut" x1="930" y1="0" x2="930" y2="540"/>
+    <rect class="gray" x="0" y="620" width="280" height="110"/>
+    <rect class="lime" x="280" y="620" width="330" height="110"/>
+    <rect class="blue" x="610" y="620" width="320" height="110"/>
+    <rect class="ink" x="930" y="620" width="320" height="110"/>
+    <text class="n" x="140" y="665" text-anchor="middle">ALLOW</text>
+    <text class="s" x="140" y="697" text-anchor="middle">preserve conversion</text>
+    <text class="n" x="445" y="665" text-anchor="middle">CHALLENGE</text>
+    <text class="s" x="445" y="697" text-anchor="middle">buy more evidence</text>
+    <text class="n" x="770" y="665" text-anchor="middle">REVIEW</text>
+    <text class="s" x="770" y="697" text-anchor="middle">spend analyst capacity</text>
+    <text x="1090" y="665" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="26" font-weight="800" fill="#fafaf5">BLOCK</text>
+    <text x="1090" y="697" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="14" fill="#fafaf5">accept false-decline cost</text>
+  </g>
+  <text class="s" x="800" y="990" text-anchor="middle">Thresholds move with amount, challenge efficacy, review capacity, merchant economics, and incident state.</text>
+</svg>

@@ -41,6 +41,7 @@ The production build is written to `dist/` and contains only static assets.
 | 03 | [Designing a Distributed Rate Limiter: Correct Quotas Across Many Servers](blogs/03-distributed-rate-limiter/) | [FastAPI, Redis Lua token bucket, tests, and load test](blogs/03-distributed-rate-limiter/code/) |
 | 04 | [Designing a Notification Platform: Durable Intent, At-Least-Once Delivery, and Provider Reality](blogs/04-notification-platform/) | [FastAPI, transactional outbox, leased worker, provider adapters, callbacks, and tests](blogs/04-notification-platform/code/) |
 | 21 | [Designing a Recommendation System: From a Popularity Baseline to Multi-Stage Ranking at Scale](blogs/21-recommendation-system/) | [Offline trainer, multi-source retrieval, ranking, diversity, temporal evaluation, FastAPI, and tests](blogs/21-recommendation-system/code/) |
+| 22 | [Designing Real-Time Fraud Detection: A Decision System Under Adversarial Drift](blogs/22-real-time-fraud-detection/) | [Temporal trainer, rolling features, rules and policy, idempotent FastAPI decisions, delayed labels, and tests](blogs/22-real-time-fraud-detection/code/) |
 
 ## Planned direction
 

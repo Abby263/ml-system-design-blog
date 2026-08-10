@@ -1,0 +1,10 @@
+.venv/
+.env
+artifacts/
+fraud.db*
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+build/
+*.egg-info/
