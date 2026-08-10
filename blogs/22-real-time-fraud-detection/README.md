@@ -85,6 +85,8 @@ BLOCK       reject immediately
 - preserve the exact evidence and versions behind a decision;
 - capture authorization, challenge, dispute, appeal, and analyst outcomes for learning.
 
+**For example:** a $900 purchase attempt from a two-hour-old account, on a card never seen at this merchant, arrives after three failed attempts from the same device in the last ten minutes. Hard controls find no sanctions or compromised-token match; the model returns a calibrated score of 0.78; the policy — weighing the amount, the account's age, and the device velocity — resolves that to `CHALLENGE` with reason codes `["new_account", "card_velocity_10m"]`; the response reaches checkout in under 80 ms with a `decision_id` that every later outcome (challenge passed, chargeback filed, appeal) will reference.
+
 ## Non-Functional Requirements
 
 | Constraint | Initial target | Architectural consequence |
@@ -229,6 +231,14 @@ These numbers are a budget, not a promise that sequential RPCs will fit inside i
   <p><strong>Interviewer</strong> Why can the 25 ms feature budget not contain five sequential 5 ms calls?</p>
   <p><strong>Candidate</strong> Those are nominal numbers, not guaranteed tails. Network and dependency latency compound, and one retry consumes the whole budget. I batch or parallelize independent reads under child deadlines, then cancel or degrade optional groups when the parent deadline approaches.</p>
 </aside>
+
+### Cost and Unit Economics
+
+- **Model inference is comparatively cheap here; storage and human review are not.** A GBDT scoring a few hundred features on CPU costs far less per decision than the review queue: at even a conservative few dollars of fully-loaded analyst cost per case, a queue sized for ten thousand reviews a day is a multi-million-dollar annual line item — which is exactly why "prioritize cases by expected value of information" earlier in this article is a cost decision, not only a quality one.
+- **The 180-day, 108 TB raw lake carries a real, recurring storage bill**, and it's large on purpose: immutable audit history is the feature this design is buying, not an accident of logging everything.
+- **False declines are a cost the P&L rarely itemizes explicitly.** Every legitimate `BLOCK` or unnecessary `CHALLENGE` is lost revenue and, compounded over time, lost customer lifetime value — not just avoided fraud loss. The expected-cost formulas above already account for this per transaction; it's worth surfacing `legitimate_probability * lost_margin_and_trust_cost`, summed across a day's volume, as its own executive-facing number next to "fraud dollars prevented."
+
+As with any illustrative sizing in this article, treat absolute dollar figures as a sketch of where the money goes, not a vendor quote. The actionable habit is putting a cost line next to every latency and quality line, not memorizing today's cloud price list.
 
 ## HLD V0
 
@@ -819,7 +829,7 @@ Every degraded decision says `degraded=true`, names unavailable feature groups, 
 
 Never silently drop transactions labelled “low risk” when the system is overloaded. Every request receives a decision or an explicit timeout/error interpreted by the caller's documented policy, and every acknowledged attempt is durably recorded where audit or financial controls require it. Backpressure can postpone analytics and optional enrichment; it cannot make authorization history disappear.
 
-Bad records go to a quarantine or dead-letter stream with the schema reason, original event identity, source, and replay lineage. Do not silently coerce an invalid amount, timestamp, or entity identifier into a plausible value. During an alert flood, coalesce cases by entity or fraud ring, suppress duplicate notifications while preserving raw events, apply tenant quotas and value-aware queue priority, and trip a circuit breaker or kill switch when a bad rule or model is amplifying traffic.
+Bad records go to a quarantine or dead-letter stream with the schema reason, original event identity, source, and replay lineage. Do not silently coerce an invalid amount, timestamp, or entity identifier into a plausible value. During an alert flood, coalesce cases by entity or fraud ring, suppress duplicate notifications while preserving raw events, apply tenant quotas and value-aware queue priority, and trip a circuit breaker or kill switch when a bad rule or model is amplifying traffic. That kill switch needs a named on-call owner and a documented escalation path — "someone can turn this off" is not the same as "the person paged at 3 a.m. knows they're authorized to."
 
 ### HLD V2: Build a Global, Multi-Tenant Risk Platform
 
@@ -956,6 +966,8 @@ Risk platforms touch payment, device, location, identity, and behavioral data. M
 Exclude protected attributes unless there is a lawful, reviewed reason to use them. Also test proxies: geography, device price, language, and account history can create uneven false declines. Measure approval, challenge, review, block, appeal, and error rates across permitted slices. Different base rates make one fairness metric insufficient; document which harm is being constrained and why.
 
 Human review does not remove bias. Measure analyst agreement, reversal, and decision time by slice; randomize case ordering where possible; hide irrelevant sensitive fields; and provide an appeal path. A technically correct model can still create an unacceptable product if recovery from a mistake is slow or impossible.
+
+This is where named regulatory regimes stop being abstract compliance line items and start constraining the architecture directly. PCI-DSS scope is the reason payment instruments are tokenized rather than stored raw. PSD2's Strong Customer Authentication mandate in the EU is why `CHALLENGE` exists as a first-class action, not a UX nicety — for many EU transactions it's a legal requirement, not an optional friction dial. GDPR and CCPA data-subject rights mean a "right to erasure" request has to reach raw events, features, training sets, and caches, not just the primary database. Institutions subject to formal model risk management — an independent validation function, a documented model inventory, and periodic revalidation, as under the US Federal Reserve's SR 11-7 — will also need this system's model registry, versioning, and shadow/canary evidence to satisfy an auditor who has never read the code.
 
 ## LLD and Implementation
 

@@ -97,6 +97,8 @@ The system must:
 - return a request ID and record candidates, exposure, positions, versions, and outcomes;
 - support a safe non-personalized fallback.
 
+**For example:** a viewer who has watched five cooking videos and follows two creators opens the app. Candidate generation pulls roughly 5,000 items from their two-tower embedding neighborhood, their followed creators' recent uploads, and cohort trending; eligibility removes three videos they already watched and one that's region-blocked; ranking and re-ranking narrow that to twenty, capping any single creator at two slots; the response carries `request_id: rec_9f2a...` so that when the viewer skips item three and watches item one to completion, both events join back to the exact candidates that were — and weren't — shown.
+
 ## Non-Functional Requirements
 
 | Constraint | Initial target | Design consequence |
@@ -225,6 +227,16 @@ Budgets force design decisions. A candidate source that takes 300 ms does not be
   <a href="assets/interview-board-02-critical-path-and-learning.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-02-critical-path-and-learning.svg" alt="Hand-drawn recommendation interview whiteboard separating the synchronous multi-stage retrieval and ranking funnel from the dashed asynchronous exposure, training, evaluation, and model-release loop"></a>
   <figcaption>Whiteboard checkpoint 2: solid arrows are work inside the 200 ms request deadline; dashed blue arrows are replayable background work. The notes preserve the interviewer discussion about child deadlines, partial candidates, and fallback. Original diagram for this article.</figcaption>
 </figure>
+
+### Cost and Unit Economics
+
+Latency and QPS numbers don't tell a CTO what this costs to run. A rough sketch, using illustrative unit prices rather than a vendor quote:
+
+- **Heavy ranking dominates compute spend.** At roughly 11,500 average requests/sec scoring 200 batched candidates each, GPU-batched inference is plausibly the largest single line item in serving cost — the same shape as most production recommenders. Pre-ranking and retrieval run on CPU at a fraction of that per-unit cost, which is part of why the funnel narrows before the expensive stage, not just why it's fast.
+- **Storage is comparatively cheap, but not free, and the multiplier is a real decision.** Candidate-level impression logging — this article's central design choice for debuggability — multiplies event volume by roughly the candidate-set size per request. Logging 1,000 pre-ranked candidates instead of 20 final items is close to a 50x storage and I/O cost increase on the exposure table alone. That's the price of being able to answer "would a different model have picked something better here?" months later.
+- **Cost per thousand feeds belongs on the same dashboard as p99 latency**, not in a separate finance review — it already appears in the system metrics list above, and it's what tells you whether the next scaling trigger (accelerator saturation) is also a budget trigger.
+
+Treat any absolute figure here as illustrative. The actionable habit is putting a cost line next to every latency and quality line on the release dashboard, not memorizing today's cloud price list.
 
 ## HLD V0
 
@@ -740,6 +752,8 @@ Minimize and retain behavioral data deliberately. Hash or tokenize user identifi
 Policy filtering is defense in depth: eligibility before retrieval where possible, again before ranking, and finally before response. Models cannot override age, region, rights, block, or safety decisions.
 
 Recommendation objectives shape creator behavior. Monitor whether exposure collapses onto a tiny head, whether new creators receive viable tests, and whether optimizing watch time increases reports or decreases long-term satisfaction. Publish and audit value-function changes like product policy.
+
+Two regulatory regimes bear on this design specifically, not just on privacy in general. In the EU, the Digital Services Act adds transparency obligations for recommender systems at very large platforms — users must be able to see why content was recommended, and in some cases must be offered a non-profiling-based feed option; the versioned value function and slate-policy lineage already described here are exactly the artifacts a DSA transparency answer draws on. GDPR's rules on automated decision-making and profiling apply more loosely, since ranking a feed isn't the kind of legal-or-similarly-significant-effect decision a credit or fraud action is — but the same audit trail (candidate provenance, model/policy versions, exposure logs) is what would let the platform answer a regulator's question about why a specific user saw what they saw.
 
 ## LLD and Implementation
 

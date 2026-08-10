@@ -241,6 +241,60 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
   });
 });
 
+const figureLinks = [...document.querySelectorAll(".technical-figure > a")];
+if (figureLinks.length) {
+  const lightbox = document.createElement("div");
+  lightbox.className = "lightbox-overlay";
+  lightbox.hidden = true;
+  lightbox.innerHTML = `
+    <figure class="lightbox-figure" role="dialog" aria-modal="true" aria-label="Expanded diagram">
+      <button type="button" class="lightbox-close" aria-label="Close diagram">&times;</button>
+      <div class="lightbox-figure-scroll"><img alt=""></div>
+      <figcaption></figcaption>
+    </figure>`;
+  document.body.appendChild(lightbox);
+
+  const lightboxImg = lightbox.querySelector("img");
+  const lightboxCaption = lightbox.querySelector("figcaption");
+  const lightboxClose = lightbox.querySelector(".lightbox-close");
+  let lastFocused = null;
+
+  const openLightbox = (link) => {
+    const img = link.querySelector("img");
+    if (!img) return;
+    lightboxImg.src = link.getAttribute("href");
+    lightboxImg.alt = img.getAttribute("alt") ?? "";
+    lightboxCaption.textContent = link.closest("figure")?.querySelector("figcaption")?.textContent.trim() ?? "";
+    lastFocused = document.activeElement;
+    lightbox.hidden = false;
+    document.body.style.overflow = "hidden";
+    lightboxClose.focus();
+  };
+
+  const closeLightbox = () => {
+    if (lightbox.hidden) return;
+    lightbox.hidden = true;
+    lightboxImg.src = "";
+    document.body.style.overflow = "";
+    lastFocused?.focus?.();
+  };
+
+  figureLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openLightbox(link);
+    });
+  });
+
+  lightbox.addEventListener("click", (event) => {
+    if (event.target === lightbox) closeLightbox();
+  });
+  lightboxClose.addEventListener("click", closeLightbox);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeLightbox();
+  });
+}
+
 const readingBar = document.querySelector("[data-reading-progress]");
 if (readingBar) {
   const updateProgress = () => {
