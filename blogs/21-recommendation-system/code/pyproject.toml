@@ -1,0 +1,33 @@
+[project]
+name = "designing-ml-systems-recommendation-system"
+version = "0.1.0"
+description = "Multi-stage recommendation companion for the Designing ML Systems series"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.116.1",
+    "numpy==2.3.2",
+    "pydantic-settings==2.10.1",
+    "uvicorn[standard]==0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx==0.28.1",
+    "pytest==8.4.1",
+    "ruff==0.12.7",
+]
+
+[project.scripts]
+recommendation-train = "app.train:main"
+recommendation-evaluate = "app.evaluate:main"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

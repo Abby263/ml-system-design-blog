@@ -1,0 +1,21 @@
+services:
+  trainer:
+    build: .
+    command: recommendation-train --output /artifacts/bundle.json
+    volumes:
+      - recommendation-artifacts:/artifacts
+
+  api:
+    build: .
+    environment:
+      ARTIFACT_PATH: /artifacts/bundle.json
+    depends_on:
+      trainer:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    volumes:
+      - recommendation-artifacts:/artifacts:ro
+
+volumes:
+  recommendation-artifacts:

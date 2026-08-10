@@ -1,0 +1,15 @@
+item_id,creator_id,topic,created_at,quality
+video-001,creator-a,machine-learning,2026-07-01T10:00:00Z,0.94
+video-002,creator-b,distributed-systems,2026-07-03T10:00:00Z,0.91
+video-003,creator-c,cooking,2026-07-04T10:00:00Z,0.86
+video-004,creator-d,travel,2026-07-07T10:00:00Z,0.88
+video-005,creator-a,machine-learning,2026-07-10T10:00:00Z,0.96
+video-006,creator-e,fitness,2026-07-11T10:00:00Z,0.82
+video-007,creator-b,distributed-systems,2026-07-15T10:00:00Z,0.93
+video-008,creator-f,music,2026-07-18T10:00:00Z,0.84
+video-009,creator-g,cooking,2026-07-21T10:00:00Z,0.90
+video-010,creator-h,travel,2026-07-23T10:00:00Z,0.89
+video-011,creator-i,machine-learning,2026-07-28T10:00:00Z,0.97
+video-012,creator-j,fitness,2026-08-01T10:00:00Z,0.87
+video-013,creator-k,distributed-systems,2026-08-04T10:00:00Z,0.95
+video-014,creator-l,music,2026-08-07T10:00:00Z,0.92

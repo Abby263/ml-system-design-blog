@@ -53,12 +53,30 @@ const writePage = async (route, html) => {
   await writeFile(target, html, "utf8");
 };
 
+const GENERATED_DIRECTORY_NAMES = new Set([
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "__pycache__",
+  "artifacts",
+  "build",
+  "dist",
+  "node_modules",
+]);
+
 const walkFiles = async (directory, prefix = "") => {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (entry.name === ".DS_Store") continue;
+    if (
+      entry.isDirectory() &&
+      (GENERATED_DIRECTORY_NAMES.has(entry.name) || entry.name.endsWith(".egg-info"))
+    ) {
+      continue;
+    }
     const absolute = path.join(directory, entry.name);
     const relative = path.join(prefix, entry.name);
 

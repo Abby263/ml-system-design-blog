@@ -379,6 +379,7 @@ main { overflow: clip; }
   .mobile-menu a { padding: 11px 4px; border-bottom: 1px solid var(--line); font-weight: 650; }
   .hero { grid-template-columns: 1fr; min-height: 0; padding-block: 70px; gap: 55px; }
   .hero h1, .page-hero h1, .article-hero h1, .code-hero h1 { font-size: clamp(48px, 15vw, 70px); }
+  .article-hero h1 { overflow-wrap: break-word; font-size: clamp(45px, 12.5vw, 62px); }
   .hero-lede, .page-hero > p, .code-hero > p { font-size: 17px; }
   .hero-system { min-height: 430px; }
   .node-input { top: 38px; left: 24px; }

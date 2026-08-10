@@ -222,7 +222,7 @@ This page stays as the permanent index for *Designing ML Systems*. Every article
 
 **Part III — Machine Learning System Design**
 
-21. **Recommendation System** — candidate generation, ranking, embeddings, online/offline features, feedback loops, experimentation. *(Coming soon)*
+21. **[Recommendation System](../21-recommendation-system/)** — candidate generation, ranking, embeddings, online/offline features, feedback loops, experimentation, reliability, and global serving.
 22. **Real-Time Fraud Detection** — streaming features, low-latency inference, class imbalance, feature freshness, feedback. *(Coming soon)*
 23. **ML Feature Store** — online vs. offline features, point-in-time correctness, freshness, training-serving consistency. *(Coming soon)*
 24. **ML Training Platform** — data versioning, distributed training, orchestration, experiment tracking, GPU scheduling. *(Coming soon)*
