@@ -7,15 +7,19 @@ This is the baseline for every ML system-design article in this repository. Each
 
 The goal is not to display a memorized final architecture. The reader should see requirements create constraints, constraints break simple designs, and measured failures justify each new component.
 
+This document is the required, condensed checklist. **[The full framework](ai-system-design-interview-framework.md)** it is distilled from covers 72 stages across classical ML, RAG, LLM infrastructure, and agentic systems in more depth — use it to work out which stages matter for a new article's problem, or when a specific decision (training architecture, multi-region, agent/tool boundaries, and so on) needs more detail than this checklist gives. Do not turn its 72 headings into 72 headings in a blog post; an article should read like one continuous interview, not a checklist being marched through.
+
+The single most important requirement below is the first one: **the article must read like an actual interview transcript, not an essay with dialogue boxes dropped in for decoration.** A reader should be able to picture two people at a whiteboard.
+
 ## Required interview spine
 
 Every classical ML system-design article should cover these stages in this order. Related stages may share a section when that improves the narrative, but they should remain visibly identifiable.
 
-1. **Interview prompt** — preserve the original ambiguity.
+1. **Interview prompt** — preserve the original ambiguity, then resolve it through a multi-turn clarifying-questions exchange. The candidate asks several questions that would each change the architecture (what decision is being automated, what actions exist, what deadline it sits inside, what scale/geography it needs to survive); the interviewer answers each one; the candidate reacts to the answer before asking the next question. This is not a single Q&A pair and not a bullet list of "assumptions" — it is the visible negotiation that produces the assumptions. Everything that follows should read as the formal write-up of what was just established in that exchange, not a repeat of it.
 2. **Business decision and scope** — identify the user, protected entity, decision, action, and deadline.
 3. **Functional requirements** — describe what the system must do.
 4. **Non-functional requirements** — state latency, throughput, availability, consistency, privacy, audit, regional, and cost constraints that matter.
-5. **Intelligence problem** — separate what the model predicts from what business policy decides.
+5. **Intelligence problem** — ask directly which parts of the system actually need a learned model versus a deterministic rule, then separate what the model predicts from what business policy decides. Treat "which parts need intelligence?" as a real question in the dialogue, not an assumption the candidate silently makes.
 6. **Success metrics** — connect business, ML, system, and operational metrics.
 7. **Back-of-the-envelope estimation** — calculate only numbers that influence architecture.
 8. **HLD V0** — draw the smallest system that could work.
@@ -28,6 +32,11 @@ Every classical ML system-design article should cover these stages in this order
 15. **Final whiteboard and two-minute answer** — summarize the architecture, key choices, trade-offs, failure risks, and next scaling trigger.
 
 ## Write it as an interview
+
+The article should feel like an actual interview has been transcribed and lightly cleaned up — not an essay that occasionally quotes two people. Two things make dialogue read as transcribed rather than staged:
+
+- **Real exchanges have friction.** The interviewer sometimes pushes back, asks "why not X instead," or only half-answers before the candidate asks a follow-up. A clarifying-questions exchange should be several turns long, with the candidate's next question genuinely depending on the previous answer — not a list of questions asked in a vacuum and answered in one shot.
+- **The candidate reasons out loud.** Prefer "That rules out X, which means..." over restating the fact and moving on. The reader should be able to tell *why* an answer mattered, in the candidate's own words, not just that it was given.
 
 Use short dialogue callouts at consequential decision points:
 
@@ -110,6 +119,14 @@ Problem -> simplest credible option -> selected option -> why it fits now
         -> rejected alternative -> failure mode -> trigger to revisit
 ```
 
+State trade-offs as explicit comparisons, not adjectives. Not:
+
+> Redis is fast.
+
+But:
+
+> Local caching gives us lower latency, but Redis gives the entire service fleet a shared cache. Given that mappings are frequently reused across replicas, I'll take the network hop for better consistency and shared utilization.
+
 Access patterns come before database products. Vendor-neutral architecture comes before cloud mapping. Microservices require a measurable ownership, scaling, runtime, or failure-isolation boundary. Apply SOLID, DRY, KISS, YAGNI, and design patterns only where they explain a real decision:
 
 - **SOLID:** show the interface or responsibility that benefits.
@@ -129,7 +146,10 @@ A strong question asks the reader to choose under constraints—for example, wha
 Before publication, verify:
 
 - [ ] The article begins with an ambiguous interview prompt, not a final architecture.
+- [ ] That ambiguity is resolved through a multi-turn clarifying-questions exchange, not a single Q&A or a prose list of assumptions.
+- [ ] "Which parts of this need a learned model?" is asked as a real question, not assumed.
 - [ ] Business, functional, and non-functional requirements are explicit.
+- [ ] Major trade-offs are phrased as explicit comparisons ("X over Y because Z"), not adjectives ("X is fast").
 - [ ] Back-of-the-envelope numbers trace to later design choices.
 - [ ] Model prediction is separated from business policy/action.
 - [ ] Consequential technical terms are defined at first use.

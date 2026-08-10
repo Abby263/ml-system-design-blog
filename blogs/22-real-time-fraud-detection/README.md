@@ -41,10 +41,8 @@ We will treat this as a live system-design interview. We begin with an ambiguous
 
 <aside class="interview-dialogue">
   <p><strong>Interviewer</strong> Design a real-time fraud-detection system for a global payment platform.</p>
-  <p><strong>Candidate</strong> Before I draw components or choose a model, I want to clarify the decision we are making, who is affected, which actions are available, and how quickly the answer is needed.</p>
+  <p><strong>Candidate</strong> Before I draw anything, I'd like to ask a few questions — that sentence alone doesn't tell me enough to start.</p>
 </aside>
-
-That one sentence is intentionally ambiguous. “Fraud” could mean stolen-card payments, account takeover, promo abuse, fake merchants, money laundering, card testing, or coordinated fraud rings. These problems have different prediction units, labels, deadlines, and legal obligations. Jumping directly to Kafka, a feature store, or a neural network would hide those choices rather than answer them.
 
 Our first whiteboard therefore contains only the unresolved decision:
 
@@ -58,11 +56,25 @@ Fraud decision system
 Action — still to be defined
 ```
 
+Getting from that box to an actual architecture starts with resolving the ambiguity, not with drawing Kafka, a feature store, or a neural network:
+
+<aside class="interview-dialogue">
+  <p><strong>Candidate</strong> "Fraud" covers a lot of ground — stolen-card payments, account takeover, money laundering, promo abuse, coordinated rings. Which one are we solving for?</p>
+  <p><strong>Interviewer</strong> Let's say card-not-present payment authorization for an e-commerce marketplace.</p>
+  <p><strong>Candidate</strong> Okay, that fixes the unit of prediction as one payment attempt, and it means I can set account-takeover investigation and AML case generation aside — different labels, different legal obligations, probably a different service entirely. Next: what can the system actually do about a risky one? Just flag it for someone later, or intervene directly?</p>
+  <p><strong>Interviewer</strong> It can allow the payment, challenge it with something like 3DS or an OTP, hold it for manual review, or block it outright.</p>
+  <p><strong>Candidate</strong> Four levers, not two — so I'm not building a binary fraud classifier, I'm building a policy that chooses among interventions with different costs. That'll matter later for what I ask a model to output. Where does the decision have to land — before authorization completes, or can it run alongside it and catch up asynchronously?</p>
+  <p><strong>Interviewer</strong> Before. It has to return an action before the payment orchestrator calls or completes authorization.</p>
+  <p><strong>Candidate</strong> That's a hard synchronous deadline, so whatever evidence I use has to be retrievable inside it — no waiting on a slow vendor call or an open-ended graph traversal. How fast, roughly, and at what scale?</p>
+  <p><strong>Interviewer</strong> The business would tolerate p99 under 80 ms. Volume is high enough that a database call per feature won't hold up. It's also global — several currencies, and a few regions won't let certain data leave the region.</p>
+  <p><strong>Candidate</strong> Global and residency-constrained rules out one shared data store everywhere from the start — I'll come back to that once regional cells come up. That's enough to sketch something.</p>
+</aside>
+
 ## Clarify the Business Decision and Requirements
 
 ### Business statement
 
-Our primary surface is a card-not-present payment authorization for an e-commerce marketplace. The unit of prediction is a payment attempt. The risk service may use account, card-token, device, IP, merchant, session, and network evidence. It must return an action before the payment orchestrator calls or completes authorization.
+The risk service may use account, card-token, device, IP, merchant, session, and network evidence to make its decision.
 
 A customer presses **Pay** on a $900 order. The card has never appeared at this merchant, the account is two hours old, and three small attempts from the same device just failed. Blocking a stolen card prevents loss; blocking a legitimate customer loses the sale and damages trust. The business decision is therefore not “fraud or not fraud?” It is “which intervention has the lowest expected harm given what we know before the deadline?”
 

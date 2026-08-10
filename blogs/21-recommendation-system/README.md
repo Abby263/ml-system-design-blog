@@ -61,10 +61,18 @@ The prompt is: **Design the personalized home feed for a large video platform.**
 
 <aside class="interview-dialogue">
   <p><strong>Interviewer</strong> Design the personalized home feed for a large video platform.</p>
-  <p><strong>Candidate</strong> Before I sketch anything, I want to pin down which surface this is. A home feed, "up next," and search all end in a ranked list of videos, but they start from different amounts of intent and would change what I build next. Can I assume this is the first screen someone sees when they open the app?</p>
+  <p><strong>Candidate</strong> Before I sketch anything, I have a few questions — this could mean fairly different systems depending on the answers. First: which surface is this? A home feed, "up next," and search all end in a ranked list of videos, but they start from very different amounts of intent.</p>
+  <p><strong>Interviewer</strong> The home feed — the first screen someone sees when they open the app.</p>
+  <p><strong>Candidate</strong> Good, that's the hardest of the three, since there's no explicit query and no current video to anchor on. What can a user actually do with a recommended video besides watch it? I'm asking because the action set determines what labels I'll have to work with later.</p>
+  <p><strong>Interviewer</strong> They can watch, skip, like, share, hide, or report.</p>
+  <p><strong>Candidate</strong> That's rich enough to build a real objective instead of chasing raw clicks — hides and reports especially, since without a signal like that I'd have no way to penalize a model that's technically engaging but harmful. How big is the catalog, and how fast does a new upload need to become recommendable?</p>
+  <p><strong>Interviewer</strong> Tens of millions of videos at scale, and new uploads should be eligible within about fifteen minutes.</p>
+  <p><strong>Candidate</strong> Fifteen minutes rules out anything that depends on a daily batch job to make an item eligible — I'll need a fast path for fresh inventory. Last question: is there content that must never be recommended, no matter how well it scores?</p>
+  <p><strong>Interviewer</strong> Yes — age-restricted, policy-violating, rights-restricted material. That has to be non-negotiable.</p>
+  <p><strong>Candidate</strong> Then that's a hard deterministic gate, not something I'll ever let a ranking model override. That's enough to sketch a first contract.</p>
 </aside>
 
-We will serve twenty videos when a user opens or refreshes the home feed. The catalog mixes evergreen and newly uploaded content. Users can watch, skip, like, share, hide, or report a video. Creators need a credible path to discovery. Policy-ineligible videos must never appear, regardless of model score.
+The catalog mixes evergreen and newly uploaded content, and creators need a credible path to discovery alongside established ones. With the action set and the eligibility gate settled, twenty videos per home-feed request is the target surface.
 
 Clarifying the surface matters. “Up next” recommendations begin with the current video and optimize a local transition. Search ranking begins with an explicit query. A home feed begins with weaker intent and must infer what kind of session the user wants now. The same company may need all three, but their candidates, features, labels, and evaluation horizons differ.
 
@@ -121,6 +129,11 @@ This decomposition creates five explicit contracts:
 3. **Heavy ranking predicts outcomes.** It estimates meaningful watch, satisfaction, negative feedback, and return behavior using richer user-item-context interactions.
 4. **Slate policy makes the product decision.** A versioned value function and deterministic constraints balance relevance with safety, diversity, freshness, creator concentration, and exploration.
 5. **Exposure logging closes the loop.** Candidate provenance, positions, propensities, feature/model versions, and outcomes feed streaming state and point-in-time training data.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Which of these five actually need a learned model? It feels like you could hand-write a lot of this.</p>
+  <p><strong>Candidate</strong> Candidate generation and heavy ranking are where learning earns its keep — predicting what this specific person is likely to watch isn't something I can hand-write rules for at this scale. Everything else stays deterministic on purpose: eligibility filtering, the hard constraints in the re-ranker, and exposure logging don't need to learn anything, and I don't want them to. A bug in the ranker should produce a worse feed. It should never produce an unsafe one.</p>
+</aside>
 
 The synchronous request path should remain region-local and bounded. Model training, item-embedding generation, ANN index construction, evaluation, and artifact promotion belong in the asynchronous control and learning plane. Versioned bundles connect the two planes; raw training jobs never mutate a live request halfway through its execution.
 
