@@ -34,6 +34,7 @@ We will treat this as a live system-design interview. We begin with an ambiguous
 - What worked, what failed, and when to evolve
 - How I would summarize this in the last two minutes
 - Interview follow-ups
+- Interview whiteboard
 - References
 - What comes next
 
@@ -286,6 +287,11 @@ A **modular monolith** is one deployable application with explicit internal modu
   <p><strong>Interviewer</strong> Why gradient boosting rather than a neural network?</p>
   <p><strong>Candidate</strong> The current evidence is mostly tabular, labels are limited and delayed, and the deadline favors cheap CPU inference. A neural model becomes credible when sequences, embeddings, or graph structure add repeatable value that survives temporal evaluation—not because it sounds more advanced.</p>
 </aside>
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-01-decision-and-v0.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-01-decision-and-v0.svg" alt="Hand-drawn fraud system interview whiteboard capturing the business decision, actions, latency and audit constraints, prediction-versus-policy boundary, HLD V0, and delayed-label training loop"></a>
+  <figcaption>Whiteboard checkpoint 1: the candidate records the negotiated business contract, keeps risk prediction separate from action policy, and draws the smallest auditable boundary before introducing streams or services. Original diagram for this article.</figcaption>
+</figure>
 
 ## Design the Event and Decision Contracts
 
@@ -570,6 +576,11 @@ The caller propagates an absolute deadline. Each child call receives a smaller d
   <p><strong>Candidate</strong> The measured boundaries changed. Streaming has stateful event-time scaling, model runtimes release independently, and case management has a different workload. I still keep synchronous hops few; service extraction is justified by ownership, scaling, runtime, or failure isolation—not by a preference for microservices.</p>
 </aside>
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-02-critical-path-and-streaming.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-02-critical-path-and-streaming.svg" alt="Hand-drawn fraud interview whiteboard separating the solid 80 millisecond authorization path from dashed replayable streaming, state, delayed labels, and training, with notes for retries, stale features, graph calls, and model fallback"></a>
+  <figcaption>Whiteboard checkpoint 2: checkout waits only for the bounded decision lane. Dashed blue paths carry the durable outbox, velocity state, delayed truth, and release loop; the bottom notes capture the failure-mode follow-ups an interviewer is likely to ask. Original diagram for this article.</figcaption>
+</figure>
+
 ## Make Velocity Features Correct Under Retries and Races
 
 Velocity features are deceptively stateful. “Attempts by this card in ten minutes” requires decisions about identity, event time, late events, duplicates, window boundaries, and concurrent updates.
@@ -797,6 +808,11 @@ Recovery targets depend on business loss and regulatory obligations. The followi
 
 A disaster-recovery drill should evacuate a region, restore the latest verified snapshot, replay the canonical event log from a recorded offset, and verify deduplication by comparing decision IDs, counts, and ledger checksums before failback. It must also prove that residency boundaries survive rerouting: raw events may need to remain in-jurisdiction even when compact risk evidence is replicated. A runbook that has never restored data or exercised regional routing is documentation, not a recovery capability.
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-03-regional-and-failure.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-03-regional-and-failure.svg" alt="Hand-drawn fraud interview whiteboard showing region-local risk cells, asynchronous cross-region risk signals, a global control and investigation plane, degraded policies, limited strong consistency, bottlenecks, and disaster-recovery proof"></a>
+  <figcaption>Whiteboard checkpoint 3: the red boundary keeps WAN calls off checkout, while compact evidence and immutable bundles cross asynchronously. Degraded policy and recovery evidence are drawn as first-class design decisions. Original diagram for this article.</figcaption>
+</figure>
+
 ## Map the Design to AWS and Google Cloud
 
 One AWS mapping is:
@@ -1018,6 +1034,13 @@ Use mature outcomes from previously allowed traffic, shadow predictions, analyst
 **Would you use an LLM in the synchronous path?**
 
 Not for this tabular authorization decision unless it provides unique validated signal within cost and latency constraints. It is more naturally useful for case summarization, scam-message understanding, document review, and analyst assistance with evidence citations.
+
+## Interview Whiteboard
+
+The three whiteboard checkpoints above are views from one board that evolves from the clarified decision to HLD V0, fresh streaming memory, and the global regional-cell design. The shared snapshot opens as an editable local copy in Excalidraw; the repository file is the durable source of truth.
+
+- [Open the fraud-detection interview board in Excalidraw](https://excalidraw.com/#json=ggyBvonabmAAIPt6ttGwr,TuW8eVCU4HhZl4FbBpJzqQ)
+- [Download the editable `.excalidraw` scene](assets/fraud-detection-interview-board.excalidraw)
 
 ## References
 

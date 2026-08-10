@@ -52,6 +52,7 @@ This article will build that system three times. The first version is intentiona
 - Run the companion implementation
 - What worked, what failed, and when to evolve
 - Interview follow-ups
+- Interview whiteboard
 - References
 - What comes next
 
@@ -86,6 +87,11 @@ Our initial serving contract is:
 - record the exact candidate set, features/model versions, final positions, and later outcomes for learning and audit.
 
 The response includes an opaque recommendation request ID. Every impression and interaction carries that ID plus item and position. Without exposure logs, a click means little: we do not know which alternatives were available, which items were never shown, or whether the user clicked because an item was relevant or merely first.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-01-scope-and-v0.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-01-scope-and-v0.svg" alt="Hand-drawn interview whiteboard capturing the recommendation product contract, scale constraints, intelligence boundary, smallest viable feed loop, and rejected exhaustive-scoring approach"></a>
+  <figcaption>Whiteboard checkpoint 1: the candidate keeps the negotiated assumptions visible, separates learned prediction from deterministic policy, and crosses out exhaustive catalog scoring before adding infrastructure. Original diagram for this article.</figcaption>
+</figure>
 
 ## Define Success Without Training Clickbait
 
@@ -188,6 +194,11 @@ Budgets force design decisions. A candidate source that takes 300 ms does not be
 <figure class="technical-figure wide-figure">
   <a href="assets/latency-waterfall.svg" target="_blank" rel="noreferrer"><img src="assets/latency-waterfall.svg" alt="Two-hundred-millisecond recommendation request latency waterfall with parallel retrieval sources, pre-ranking, heavy ranking, and contingency"></a>
   <figcaption>Retrieval sources run in parallel under child deadlines; expensive ranking is one batched call, not one RPC per item.</figcaption>
+</figure>
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-02-critical-path-and-learning.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-02-critical-path-and-learning.svg" alt="Hand-drawn recommendation interview whiteboard separating the synchronous multi-stage retrieval and ranking funnel from the dashed asynchronous exposure, training, evaluation, and model-release loop"></a>
+  <figcaption>Whiteboard checkpoint 2: solid arrows are work inside the 200 ms request deadline; dashed blue arrows are replayable background work. The notes preserve the interviewer discussion about child deadlines, partial candidates, and fallback. Original diagram for this article.</figcaption>
 </figure>
 
 ## Scenario 1: Ship a Useful Baseline in Weeks
@@ -502,6 +513,11 @@ Partition ANN data by model/index version and optionally item eligibility domain
   <figcaption>Cross-region coordination stays out of the request path; each cell serves with a warmed, last-known-good bundle while the global plane trains and rolls out new versions.</figcaption>
 </figure>
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-03-global-and-degraded.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-03-global-and-degraded.svg" alt="Hand-drawn recommendation interview whiteboard showing regional serving cells, a global learning and rollout plane, a failure boundary, a five-step degradation ladder, and the measured reasons to introduce microservices"></a>
+  <figcaption>Whiteboard checkpoint 3: regional cells and service boundaries appear only after scale, ownership, runtime, and failure isolation justify them; the previous system remains the degraded path. Original diagram for this article.</figcaption>
+</figure>
+
 ## Decide Between a Modular Monolith and Microservices
 
 Microservices are not an ML maturity badge.
@@ -736,6 +752,13 @@ Product and ranking leads own them jointly, and they're versioned like policy ra
 **How would the design change for e-commerce?**
 
 The funnel remains, but eligibility adds inventory, price, shipping, and seller constraints; labels emphasize conversion and margin; delayed purchase attribution matters; item freshness is different; and business re-ranking may include stock and marketplace fairness.
+
+## Interview Whiteboard
+
+The three whiteboard checkpoints above are views from one board that evolves from requirements to HLD V0, the multi-stage learning system, and global degraded serving. The shared snapshot opens as an editable local copy in Excalidraw; the repository file is the durable source of truth.
+
+- [Open the recommendation-system interview board in Excalidraw](https://excalidraw.com/#json=g1N3DBvV2ItGQsQuT77_L,8mWRnvaIB0PfWg8AHd7Edw)
+- [Download the editable `.excalidraw` scene](assets/recommendation-system-interview-board.excalidraw)
 
 ## References
 
