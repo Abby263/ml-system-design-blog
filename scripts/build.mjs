@@ -251,7 +251,7 @@ const homePage = (blogs) => {
           <h1>Architecture makes sense<br>once the system <em>breaks.</em></h1>
           <p class="hero-lede">A practical path from software foundations to production ML and AI platforms—one real system, one constraint, and one hard trade-off at a time.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/blogs/${latest.slug}/">Start with the introduction <span>→</span></a>
+            <a class="button button-primary" href="/blogs/${latest.slug}/">Read the latest essay <span>→</span></a>
             <a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Explore the code <span>↗</span></a>
           </div>
         </div>

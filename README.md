@@ -37,6 +37,7 @@ The production build is written to `dist/` and contains only static assets.
 | # | Blog | Code |
 |---|------|------|
 | 01 | [Designing ML Systems: Introduction](blogs/01-introduction/) | No executable code for the intro |
+| 02 | [Designing a URL Shortener: From One Table to a Global Redirect Plane](blogs/02-url-shortener/) | [FastAPI, PostgreSQL, Redis, worker, tests, and load test](blogs/02-url-shortener/code/) |
 
 ## Planned direction
 

@@ -1,0 +1,23 @@
+[project]
+name = "designing-ml-systems-url-shortener"
+version = "0.1.0"
+description = "Production-shaped URL shortener companion for the Designing ML Systems series"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg==0.30.0",
+    "fastapi==0.116.1",
+    "prometheus-client==0.22.1",
+    "redis==6.4.0",
+    "uvicorn[standard]==0.35.0",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
