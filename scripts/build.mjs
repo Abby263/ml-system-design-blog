@@ -222,6 +222,21 @@ const loadBlogs = async () => {
   return blogs.sort((a, b) => a.number - b.number);
 };
 
+const uiIcon = (name, className = "ui-icon") => {
+  const paths = {
+    "arrow-right": '<path d="M4 10h12m-4.5-4.5L16 10l-4.5 4.5"/>',
+    external: '<path d="M8 5H5.5A1.5 1.5 0 0 0 4 6.5v8A1.5 1.5 0 0 0 5.5 16h8a1.5 1.5 0 0 0 1.5-1.5V12"/><path d="M11 4h5v5M9 11l7-7"/>',
+    sun: '<circle cx="10" cy="10" r="3.25"/><path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.35 4.35l1.06 1.06M14.59 14.59l1.06 1.06M15.65 4.35l-1.06 1.06M5.41 14.59l-1.06 1.06"/>',
+    moon: '<path d="M16.5 12.4A6.75 6.75 0 0 1 7.6 3.5 6.75 6.75 0 1 0 16.5 12.4Z"/>',
+    menu: '<path d="M3 6h14M3 14h14"/>',
+    close: '<path d="m5 5 10 10M15 5 5 15"/>',
+    chevron: '<path d="m5 7.5 5 5 5-5"/>',
+  };
+
+  if (!paths[name]) throw new Error(`Unknown UI icon: ${name}`);
+  return `<svg class="${className}" viewBox="0 0 20 20" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
+};
+
 const nav = (active = "") => `
   <header class="site-header">
     <a class="brand" href="/" aria-label="Designing ML Systems home">
@@ -232,18 +247,19 @@ const nav = (active = "") => `
       <a ${active === "blogs" ? 'aria-current="page"' : ""} href="/blogs/">Blogs</a>
       <a ${active === "about" ? 'aria-current="page"' : ""} href="/about/">About</a>
       <button class="theme-toggle" type="button" aria-label="Switch color theme" aria-pressed="false" data-theme-toggle>
-        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>◐</span>
+        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>${uiIcon("moon", "ui-icon theme-icon-moon")}${uiIcon("sun", "ui-icon theme-icon-sun")}</span>
         <span data-theme-label>Dark</span>
       </button>
-      <a class="nav-source" href="${GITHUB_URL}" target="_blank" rel="noreferrer">GitHub <span>↗</span></a>
+      <a class="nav-source" href="${GITHUB_URL}" target="_blank" rel="noreferrer">GitHub <span>${uiIcon("external")}</span></a>
     </nav>
     <div class="mobile-header-actions">
       <button class="theme-toggle theme-toggle-mobile" type="button" aria-label="Switch color theme" aria-pressed="false" data-theme-toggle>
-        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>◐</span>
+        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>${uiIcon("moon", "ui-icon theme-icon-moon")}${uiIcon("sun", "ui-icon theme-icon-sun")}</span>
         <span class="visually-hidden" data-theme-label>Dark</span>
       </button>
       <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-button>
-        <span></span><span></span>
+        <span class="menu-icon menu-icon-open">${uiIcon("menu")}</span>
+        <span class="menu-icon menu-icon-close">${uiIcon("close")}</span>
       </button>
     </div>
     <nav class="mobile-menu" aria-label="Mobile navigation" data-mobile-menu>
@@ -446,7 +462,7 @@ const blogCard = (blog, featured = false) => `
       <p>${escapeHtml(blog.subtitle)}</p>
     </div>
     <div class="blog-card-footer">
-      <a class="text-link" href="/blogs/${blog.slug}/">Read the blog <span>→</span></a>
+      <a class="text-link" href="/blogs/${blog.slug}/">Read the blog <span>${uiIcon("arrow-right")}</span></a>
       <a class="code-count" href="/blogs/${blog.slug}/code/">${blog.codeFiles.length} companion ${blog.codeFiles.length === 1 ? "file" : "files"}</a>
     </div>
   </article>`;
@@ -462,8 +478,8 @@ const homePage = (blogs) => {
           <h1>Architecture makes sense<br>once the system <em>breaks.</em></h1>
           <p class="hero-lede">A practical path from software foundations to production ML and AI platforms—one real system, one constraint, and one hard trade-off at a time.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/blogs/">Read the blogs <span>→</span></a>
-            <a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Explore the code <span>↗</span></a>
+            <a class="button button-primary" href="/blogs/">Read the blogs <span>${uiIcon("arrow-right")}</span></a>
+            <a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Explore the code <span>${uiIcon("external")}</span></a>
           </div>
         </div>
         <div class="hero-system" aria-label="The series progression from software systems to AI platforms">
@@ -494,12 +510,12 @@ const homePage = (blogs) => {
           <p>Five stages, fifty systems, and a steadily rising level of complexity.</p>
         </div>
         <div class="path-grid">
-          ${SERIES_STAGES.map((stage) => `<a class="stage-card" href="/blogs/#stage-${stage.id}"><span>${stage.number}</span><div><h3>${stage.title}</h3><p>${stage.description}</p></div><b>View stage →</b></a>`).join("")}
+          ${SERIES_STAGES.map((stage) => `<a class="stage-card" href="/blogs/#stage-${stage.id}"><span>${stage.number}</span><div><h3>${stage.title}</h3><p>${stage.description}</p></div><b>View stage ${uiIcon("arrow-right")}</b></a>`).join("")}
         </div>
       </section>
       <section class="latest-section">
         <div class="shell">
-          <div class="section-heading compact"><div><p class="section-number">03 / PUBLISHED BLOGS</p><h2>Read. Build. Break. Repeat.</h2></div><a class="text-link" href="/blogs/">View all blogs <span>→</span></a></div>
+          <div class="section-heading compact"><div><p class="section-number">03 / PUBLISHED BLOGS</p><h2>Read. Build. Break. Repeat.</h2></div><a class="text-link" href="/blogs/">View all blogs <span>${uiIcon("arrow-right")}</span></a></div>
           <div class="published-blog-list">${blogs.slice().reverse().map((blog) => blogCard(blog)).join("")}</div>
         </div>
       </section>
@@ -567,7 +583,7 @@ const articlePage = (blog, previous, next) => {
           <summary>
             <span class="mobile-toc-kicker">On this page</span>
             <strong data-mobile-toc-current>Article introduction</strong>
-            <span class="mobile-toc-chevron" aria-hidden="true">⌄</span>
+            <span class="mobile-toc-chevron" aria-hidden="true">${uiIcon("chevron")}</span>
           </summary>
           <nav aria-label="Article sections">${mobileToc}</nav>
         </details>
@@ -575,7 +591,7 @@ const articlePage = (blog, previous, next) => {
           <aside class="article-toc"><p>On this page</p>${toc}</aside>
           <div class="article-content prose">${renderedContent}</div>
           <aside class="article-aside">
-            <div class="aside-card"><span class="eyebrow">COMPANION REPO</span><h3>Read the source.</h3><p>Browse runnable code, configuration, tests, and notes for this blog.</p><a class="button button-primary" href="/blogs/${blog.slug}/code/">Open code <span>→</span></a></div>
+            <div class="aside-card"><span class="eyebrow">COMPANION REPO</span><h3>Read the source.</h3><p>Browse runnable code, configuration, tests, and notes for this blog.</p><a class="button button-primary" href="/blogs/${blog.slug}/code/">Open code <span>${uiIcon("arrow-right")}</span></a></div>
           </aside>
         </div>
         <nav class="article-pagination" aria-label="Article pagination">
@@ -593,7 +609,7 @@ const codeIndexPage = (blog) => {
       <a class="file-row" href="${codeRoute(blog, file.relative)}">
         <span class="file-type">${fileIcon(file.relative)}</span>
         <span><strong>${escapeHtml(file.relative)}</strong><small>View rendered source</small></span>
-        <span>→</span>
+        <span>${uiIcon("arrow-right")}</span>
       </a>`).join("")
     : `<div class="empty-state"><p>No companion code has been published for this blog yet.</p></div>`;
 
@@ -607,7 +623,7 @@ const codeIndexPage = (blog) => {
         <span class="eyebrow"><i></i> COMPANION CODE</span>
         <h1>${escapeHtml(blog.shortTitle)}</h1>
         <p>Source files, runnable services, tests, configuration, and implementation notes that accompany the design.</p>
-        <div class="hero-actions"><a class="button button-primary" href="${sourceUrl}" target="_blank" rel="noreferrer">Open on GitHub <span>↗</span></a><a class="button button-secondary" href="/blogs/${blog.slug}/">Read the blog <span>→</span></a></div>
+        <div class="hero-actions"><a class="button button-primary" href="${sourceUrl}" target="_blank" rel="noreferrer">Open on GitHub <span>${uiIcon("external")}</span></a><a class="button button-secondary" href="/blogs/${blog.slug}/">Read the blog <span>${uiIcon("arrow-right")}</span></a></div>
       </section>
       <section class="code-browser shell">
         <div class="browser-header"><div><span></span><span></span><span></span></div><p>blogs / ${escapeHtml(blog.slug)} / code</p><small>${blog.codeFiles.length} ${blog.codeFiles.length === 1 ? "file" : "files"}</small></div>
@@ -633,7 +649,7 @@ const renderCodeFile = async (blog, file) => {
     body: `
       <section class="file-page shell">
         <div class="breadcrumbs"><a href="/blogs/">Blogs</a><span>/</span><a href="/blogs/${blog.slug}/">${escapeHtml(blog.shortTitle)}</a><span>/</span><a href="/blogs/${blog.slug}/code/">Code</a></div>
-        <div class="file-title-row"><div><span class="file-type">${fileIcon(file.relative)}</span><h1>${escapeHtml(file.relative)}</h1></div><a class="button button-secondary" href="${githubUrl}" target="_blank" rel="noreferrer">GitHub <span>↗</span></a></div>
+        <div class="file-title-row"><div><span class="file-type">${fileIcon(file.relative)}</span><h1>${escapeHtml(file.relative)}</h1></div><a class="button button-secondary" href="${githubUrl}" target="_blank" rel="noreferrer">GitHub <span>${uiIcon("external")}</span></a></div>
         <div class="file-stats"><span>${source.split("\n").length} lines</span><span>${humanFileSize(fileStats.size)}</span></div>
         ${markdownPreview}
         <section class="source-view">
@@ -666,7 +682,7 @@ const aboutPage = () =>
           <article><span>03</span><h3>Visible trade-offs</h3><p>There is rarely one correct design. The useful answer explains what would change it.</p></article>
         </div>
       </section>
-      <section class="about-cta shell"><p class="section-number">START HERE</p><h2>One long URL.<br>Then a few million clicks.</h2><div class="hero-actions"><a class="button button-primary" href="/blogs/01-introduction/">Read the introduction <span>→</span></a><a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Follow on GitHub <span>↗</span></a></div></section>`,
+      <section class="about-cta shell"><p class="section-number">START HERE</p><h2>One long URL.<br>Then a few million clicks.</h2><div class="hero-actions"><a class="button button-primary" href="/blogs/01-introduction/">Read the introduction <span>${uiIcon("arrow-right")}</span></a><a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Follow on GitHub <span>${uiIcon("external")}</span></a></div></section>`,
   });
 
 const build = async () => {

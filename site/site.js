@@ -202,9 +202,7 @@ const setTheme = (theme, persist = false) => {
     button.setAttribute("aria-pressed", String(isDark));
     button.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} theme`);
     const label = button.querySelector("[data-theme-label]");
-    const icon = button.querySelector("[data-theme-icon]");
     if (label) label.textContent = isDark ? "Light" : "Dark";
-    if (icon) icon.textContent = isDark ? "☀" : "◐";
   });
 
   if (persist) {
