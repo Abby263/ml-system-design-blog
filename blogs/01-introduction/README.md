@@ -197,7 +197,7 @@ This page stays as the permanent index for *Designing ML Systems*. Every article
 **Part I — Building the Software Foundation**
 
 1. **[URL Shortener Like Bitly](../02-url-shortener/)** — starts almost trivial, ends globally scalable. API design, relational modeling, indexes, short-ID generation, Redis, caching, concurrency, distributed IDs, event-driven analytics, CDNs, load balancing, deployment, and a handful of useful LLD patterns along the way.
-2. **Distributed Rate Limiter** — our first real brush with distributed state. Token bucket vs. leaky bucket vs. fixed/sliding window, atomic counters, Redis, consistency, tenant-aware quotas. *(Coming soon)*
+2. **[Distributed Rate Limiter](../03-distributed-rate-limiter/)** — our first real brush with distributed state. Token bucket vs. leaky bucket vs. fixed/sliding window, atomic counters, Redis, consistency, tenant-aware quotas.
 3. **Notification Platform** — email, SMS, push look simple until retries, duplicate delivery, provider outages, and fan-out show up. Queues, workers, backpressure, dead-letter handling, idempotency, Strategy/Factory/Adapter. *(Coming soon)*
 4. **Chat System Like WhatsApp** — now it's real-time. WebSockets, presence, ordering, delivery guarantees, offline messaging, partitioning, multi-region. *(Coming soon)*
 5. **Google Drive / Dropbox** — object storage, metadata DBs, multipart uploads, checksums, sync, versioning, conflict resolution. *(Coming soon)*
