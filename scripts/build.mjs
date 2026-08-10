@@ -548,7 +548,7 @@ const blogsPage = (blogs) =>
           const stageBlogs = blogs.filter((blog) => blog.number >= stage.range[0] && blog.number <= stage.range[1]);
           return `<section class="blog-stage" id="stage-${stage.id}">
             <div class="blog-stage-heading"><span>Stage ${stage.number}</span><div><h2>${stage.title}</h2><p>${stage.description}</p></div><b>${stageBlogs.length} published</b></div>
-            ${stageBlogs.length ? stageBlogs.slice().reverse().map((blog) => blogCard(blog)).join("") : `<div class="stage-empty"><strong>Planned stage</strong><p>No blogs from this stage have been published yet. The section remains visible so the complete learning path is navigable.</p></div>`}
+            ${stageBlogs.length ? stageBlogs.map((blog) => blogCard(blog)).join("") : `<div class="stage-empty"><strong>Planned stage</strong><p>No blogs from this stage have been published yet. The section remains visible so the complete learning path is navigable.</p></div>`}
           </section>`;
         }).join("")}
       </section>`,
