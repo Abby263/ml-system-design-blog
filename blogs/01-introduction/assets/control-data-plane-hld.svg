@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 900" role="img" aria-labelledby="title desc">
+  <title id="title">Control plane, data plane, and observability plane</title>
+  <desc id="desc">A high-level design showing a control plane distributing desired state to the serving data plane while an independent observability plane collects telemetry.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.plane{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.obs{fill:#e7eafd;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.flow{fill:none;stroke:#11120f;stroke-width:3;marker-end:url(#arrow)}.control{fill:none;stroke:#4e62a8;stroke-width:3;stroke-dasharray:10 8;marker-end:url(#blueArrow)}.telemetry{fill:none;stroke:#777a70;stroke-width:2.5;stroke-dasharray:3 8;marker-end:url(#grayArrow)}.k{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;fill:#777a70}.h{font:700 27px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 17px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 17px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 13px Inter,Arial,sans-serif;fill:#55584f}.sw{font:500 13px Inter,Arial,sans-serif;fill:#b7bab1}.callout{font:650 16px Inter,Arial,sans-serif;fill:#fafaf5}.label{font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px;fill:#4e62a8}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4e62a8"/></marker>
+    <marker id="grayArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#777a70"/></marker>
+  </defs>
+  <rect width="1500" height="900" class="bg"/>
+  <text class="k" x="50" y="45">HIGH-LEVEL DESIGN · PLANES SEPARATE DECISION-MAKING FROM LIVE TRAFFIC</text>
+
+  <g transform="translate(50 80)"><rect class="plane" width="1050" height="295" rx="4"/><text class="k" x="28" y="38">CONTROL PLANE · DESIRED STATE</text><text class="h" x="28" y="76">Decides what should be running</text>
+    <path class="flow" d="M225 185H310M495 185h85M765 185h85"/>
+    <g transform="translate(55 135)"><rect class="node" width="170" height="100" rx="4"/><text class="t" x="85" y="42" text-anchor="middle">Model registry</text><text class="s" x="85" y="68" text-anchor="middle">versions + artifacts</text></g>
+    <g transform="translate(310 135)"><rect class="node" width="185" height="100" rx="4"/><text class="t" x="92" y="42" text-anchor="middle">Rollout controller</text><text class="s" x="92" y="68" text-anchor="middle">canary + rollback</text></g>
+    <g transform="translate(580 135)"><rect class="node" width="185" height="100" rx="4"/><text class="t" x="92" y="42" text-anchor="middle">Routing policy</text><text class="s" x="92" y="68" text-anchor="middle">version + traffic split</text></g>
+    <g transform="translate(850 135)"><rect class="lime" width="165" height="100" rx="4"/><text class="t" x="82" y="42" text-anchor="middle">Autoscaler</text><text class="s" x="82" y="68" text-anchor="middle">desired replicas</text></g>
+  </g>
+
+  <g transform="translate(50 440)"><rect class="plane" width="1050" height="330" rx="4"/><text class="k" x="28" y="38">DATA / SERVING PLANE · LIVE REQUESTS</text><text class="h" x="28" y="76">Executes the last-known-good configuration</text>
+    <path class="flow" d="M170 205H245M420 205h75M680 205h75M935 205h70"/>
+    <g transform="translate(50 155)"><rect class="node" width="120" height="100" rx="4"/><text class="t" x="60" y="43" text-anchor="middle">Client</text><text class="s" x="60" y="68" text-anchor="middle">request</text></g>
+    <g transform="translate(245 145)"><rect class="dark" width="175" height="120" rx="4"/><text class="tw" x="87" y="46" text-anchor="middle">Inference router</text><text class="sw" x="87" y="72" text-anchor="middle">auth · quota</text><text class="sw" x="87" y="94" text-anchor="middle">model selection</text></g>
+    <g transform="translate(495 145)"><rect class="dark" width="185" height="120" rx="4"/><text class="tw" x="92" y="46" text-anchor="middle">Model server</text><text class="sw" x="92" y="72" text-anchor="middle">batch · execute</text><text class="sw" x="92" y="94" text-anchor="middle">stream response</text></g>
+    <g transform="translate(755 145)"><rect class="node" width="180" height="120" rx="4"/><text class="t" x="90" y="46" text-anchor="middle">GPU replicas</text><text class="s" x="90" y="72" text-anchor="middle">model weights</text><text class="s" x="90" y="94" text-anchor="middle">KV cache</text></g>
+    <g transform="translate(1005 155)"><rect class="lime" width="120" height="100" rx="4"/><text class="t" x="60" y="43" text-anchor="middle">Response</text><text class="s" x="60" y="68" text-anchor="middle">tokens</text></g>
+  </g>
+
+  <g transform="translate(1160 80)"><rect class="obs" width="290" height="690" rx="4"/><text class="k" x="24" y="38" fill="#3e4a76">OBSERVABILITY PLANE</text><text class="h" x="24" y="76">Sees both planes</text>
+    <g transform="translate(24 125)"><rect class="node" width="242" height="90" rx="4"/><text class="t" x="121" y="38" text-anchor="middle">Metrics</text><text class="s" x="121" y="63" text-anchor="middle">latency · errors · GPU</text></g>
+    <g transform="translate(24 245)"><rect class="node" width="242" height="90" rx="4"/><text class="t" x="121" y="38" text-anchor="middle">Traces</text><text class="s" x="121" y="63" text-anchor="middle">request + model path</text></g>
+    <g transform="translate(24 365)"><rect class="node" width="242" height="90" rx="4"/><text class="t" x="121" y="38" text-anchor="middle">Quality signals</text><text class="s" x="121" y="63" text-anchor="middle">drift · output quality</text></g>
+    <g transform="translate(24 505)"><rect class="dark" width="242" height="120" rx="4"/><text class="tw" x="121" y="42" text-anchor="middle">Alerts + SLOs</text><text class="sw" x="121" y="70" text-anchor="middle">inform operators;</text><text class="sw" x="121" y="94" text-anchor="middle">never serve traffic</text></g>
+  </g>
+
+  <path class="control" d="M420 375V430H382V585"/><path class="control" d="M675 375V415H587V585"/><path class="control" d="M982 375V430H845V585"/>
+  <text class="label" x="675" y="410">VERSION · ROUTES · REPLICA TARGETS</text>
+  <path class="telemetry" d="M680 710H1145V260H1160"/><path class="telemetry" d="M850 710H1125V390H1160"/>
+  <g transform="translate(50 810)"><rect width="1050" height="52" rx="4" fill="#11120f"/><circle cx="28" cy="26" r="8" fill="#d9ff63"/><text class="callout" x="50" y="32" fill="#fafaf5">Resilience test: if the control plane disappears, the serving plane keeps handling requests with its last-known-good config.</text></g>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 860" role="img" aria-labelledby="title desc">
+  <title id="title">System design mind map</title>
+  <desc id="desc">A mind map connecting product requirements, scale, data, runtime, reliability, operations, and machine learning concerns to system design.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.grid{stroke:#11120f;stroke-opacity:.06}.link{fill:none;stroke:#777a70;stroke-width:2}.dot{fill:#d9ff63;stroke:#11120f;stroke-width:3}.card{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.core{fill:#11120f;stroke:#11120f;stroke-width:2}.accent{fill:#8da8ff;stroke:#11120f;stroke-width:2}.k{font:700 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;fill:#777a70}.h{font:700 27px Inter,Arial,sans-serif;fill:#11120f}.p{font:500 17px Inter,Arial,sans-serif;fill:#55584f}.coreh{font:700 34px Inter,Arial,sans-serif;fill:#fafaf5}.corep{font:500 17px Inter,Arial,sans-serif;fill:#b7bab1}.accenth{font:700 27px Inter,Arial,sans-serif;fill:#11120f}
+    </style>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" class="grid" fill="none"/></pattern>
+  </defs>
+  <rect width="1400" height="860" class="bg"/><rect width="1400" height="860" fill="url(#grid)"/>
+  <path class="link" d="M700 340V190M560 430H360M840 430h200M590 545 430 670M810 545l160 125M620 350 430 220M780 350l190-130"/>
+  <circle class="dot" cx="700" cy="190" r="10"/><circle class="dot" cx="360" cy="430" r="10"/><circle class="dot" cx="1040" cy="430" r="10"/><circle class="dot" cx="430" cy="670" r="10"/><circle class="dot" cx="970" cy="670" r="10"/><circle class="dot" cx="430" cy="220" r="10"/><circle class="dot" cx="970" cy="220" r="10"/>
+
+  <g transform="translate(500 340)"><rect class="core" width="400" height="210" rx="4"/><text class="k" x="32" y="42" fill="#d9ff63">CENTRAL QUESTION</text><text class="coreh" x="32" y="92">SYSTEM DESIGN</text><text class="corep" x="32" y="132">What must this system guarantee,</text><text class="corep" x="32" y="160">at this scale, when things fail?</text><rect x="32" y="182" width="116" height="4" fill="#d9ff63"/></g>
+
+  <g transform="translate(520 55)"><rect class="card" width="360" height="135" rx="4"/><text class="k" x="24" y="34">PRODUCT</text><text class="h" x="24" y="70">Requirements</text><text class="p" x="24" y="101">Use cases · SLA · constraints</text></g>
+  <g transform="translate(70 345)"><rect class="card" width="290" height="170" rx="4"/><text class="k" x="24" y="34">CAPACITY</text><text class="h" x="24" y="70">Scale</text><text class="p" x="24" y="103">RPS · storage · bandwidth</text><text class="p" x="24" y="132">read/write ratio · growth</text></g>
+  <g transform="translate(1040 345)"><rect class="card" width="290" height="170" rx="4"/><text class="k" x="24" y="34">STATE</text><text class="h" x="24" y="70">Data</text><text class="p" x="24" y="103">Model · access patterns</text><text class="p" x="24" y="132">consistency · retention</text></g>
+  <g transform="translate(215 660)"><rect class="card" width="330" height="145" rx="4"/><text class="k" x="24" y="34">EXECUTION</text><text class="h" x="24" y="70">Runtime</text><text class="p" x="24" y="103">Sync/async · cache · queues</text></g>
+  <g transform="translate(855 660)"><rect class="card" width="330" height="145" rx="4"/><text class="k" x="24" y="34">FAILURE</text><text class="h" x="24" y="70">Reliability</text><text class="p" x="24" y="103">Timeouts · retries · recovery</text></g>
+  <g transform="translate(205 100)"><rect class="card" width="330" height="145" rx="4"/><text class="k" x="24" y="34">PRODUCTION</text><text class="h" x="24" y="70">Operations</text><text class="p" x="24" y="103">Deploy · observe · secure · cost</text></g>
+  <g transform="translate(865 90)"><rect class="accent" width="330" height="155" rx="4"/><text class="k" x="24" y="34" fill="#3e4a76">ML-SPECIFIC</text><text class="accenth" x="24" y="70">Learning systems</text><text class="p" x="24" y="103">Features · models · drift</text><text class="p" x="24" y="132">quality · feedback loops</text></g>
+</svg>

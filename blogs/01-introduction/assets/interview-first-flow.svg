@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 660" role="img" aria-labelledby="title desc">
+  <title id="title">Interview-first system design flow</title>
+  <desc id="desc">A flowchart from clarifying requirements through estimating scale, defining contracts, drawing a baseline design, stress testing it, and evolving the architecture when constraints change.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.grid{stroke:#11120f;stroke-opacity:.05}.box{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.diamond{fill:#d9ff63;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:2.5;marker-end:url(#arrow)}.loop{fill:none;stroke:#8da8ff;stroke-width:3;stroke-dasharray:9 8;marker-end:url(#blueArrow)}.n{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#777a70;letter-spacing:1.5px}.h{font:700 23px Inter,Arial,sans-serif;fill:#11120f}.p{font:500 15px Inter,Arial,sans-serif;fill:#55584f}.white{fill:#fafaf5}.small{font:700 13px Inter,Arial,sans-serif;fill:#11120f}.label{font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#4e62a8;letter-spacing:1px}
+    </style>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" class="grid" fill="none"/></pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#8da8ff"/></marker>
+  </defs>
+  <rect width="1400" height="660" class="bg"/><rect width="1400" height="660" fill="url(#grid)"/>
+  <text class="n" x="65" y="58">SYSTEM DESIGN INTERVIEW LOOP</text>
+
+  <path class="arrow" d="M265 230H315M515 230h50M765 230h50M1015 230h55M1200 300v52"/>
+  <path class="loop" d="M1070 430H185Q130 430 130 375V305"/>
+  <text class="label" x="510" y="458">NEW CONSTRAINT → REVISIT THE EARLIEST AFFECTED DECISION</text>
+
+  <g transform="translate(65 155)"><rect class="dark" width="200" height="150" rx="4"/><text class="n white" x="22" y="35">01 · ASK</text><text class="h white" x="22" y="75">Clarify</text><text class="p" x="22" y="106" fill="#b7bab1">Functional +</text><text class="p" x="22" y="130" fill="#b7bab1">non-functional needs</text></g>
+  <g transform="translate(315 155)"><rect class="box" width="200" height="150" rx="4"/><text class="n" x="22" y="35">02 · SIZE</text><text class="h" x="22" y="75">Estimate</text><text class="p" x="22" y="106">Traffic · storage</text><text class="p" x="22" y="130">latency · concurrency</text></g>
+  <g transform="translate(565 155)"><rect class="box" width="200" height="150" rx="4"/><text class="n" x="22" y="35">03 · CONTRACT</text><text class="h" x="22" y="75">Define</text><text class="p" x="22" y="106">APIs · data model</text><text class="p" x="22" y="130">access patterns</text></g>
+  <g transform="translate(815 155)"><rect class="blue" width="200" height="150" rx="4"/><text class="n" x="22" y="35" fill="#3e4a76">04 · BASELINE</text><text class="h" x="22" y="75">Design</text><text class="p" x="22" y="106">Simplest HLD that</text><text class="p" x="22" y="130">meets the contract</text></g>
+  <g transform="translate(1070 155)"><path class="diamond" d="M130 0 260 130 130 260 0 130Z"/><text class="n" x="78" y="105">05 · CHALLENGE</text><text class="h" x="63" y="143">What breaks?</text><text class="small" x="70" y="172">load · failure · change</text></g>
+  <g transform="translate(1070 352)"><rect class="dark" width="260" height="150" rx="4"/><text class="n white" x="22" y="35">06 · DEFEND</text><text class="h white" x="22" y="75">Evolve + measure</text><text class="p" x="22" y="108" fill="#b7bab1">Add only what solves</text><text class="p" x="22" y="132" fill="#b7bab1">the observed bottleneck</text></g>
+  <text class="small" x="1230" y="338">YES</text><text class="small" x="1155" y="540" text-anchor="middle">NO → SHIP THE BASELINE</text>
+</svg>

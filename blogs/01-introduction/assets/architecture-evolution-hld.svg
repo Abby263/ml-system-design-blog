@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 980" role="img" aria-labelledby="title desc">
+  <title id="title">High-level architecture evolution</title>
+  <desc id="desc">Three high-level designs showing a system evolving from one API and database to replicas with caching, then to an edge, service, data, and asynchronous analytics architecture.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.panel{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.line{fill:none;stroke:#11120f;stroke-width:2.5;marker-end:url(#arrow)}.async{fill:none;stroke:#4e62a8;stroke-width:3;stroke-dasharray:10 8;marker-end:url(#blueArrow)}.k{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;fill:#777a70}.h{font:700 26px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 17px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 17px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 13px Inter,Arial,sans-serif;fill:#55584f}.sw{font:500 13px Inter,Arial,sans-serif;fill:#b7bab1}.legend{font:600 13px Inter,Arial,sans-serif;fill:#55584f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4e62a8"/></marker>
+  </defs>
+  <rect width="1500" height="980" class="bg"/>
+  <text class="k" x="55" y="45">HIGH-LEVEL DESIGN · ARCHITECTURE EVOLVES WHEN THE WORKLOAD EARNS IT</text>
+
+  <g transform="translate(55 80)">
+    <rect class="panel" width="645" height="310" rx="4"/><text class="k" x="28" y="40">STAGE 1 · BASELINE</text><text class="h" x="28" y="78">One service, one database</text><text class="s" x="28" y="108">Correct while traffic and operational complexity are low.</text>
+    <path class="line" d="M180 205H260M390 205h80"/>
+    <g transform="translate(60 165)"><rect class="node" width="120" height="80" rx="4"/><text class="t" x="60" y="36" text-anchor="middle">Client</text><text class="s" x="60" y="58" text-anchor="middle">HTTP</text></g>
+    <g transform="translate(260 155)"><rect class="dark" width="130" height="100" rx="4"/><text class="tw" x="65" y="43" text-anchor="middle">API</text><text class="sw" x="65" y="68" text-anchor="middle">single instance</text></g>
+    <g transform="translate(470 155)"><ellipse class="node" cx="65" cy="15" rx="65" ry="15"/><path class="node" d="M0 15v70c0 8 29 15 65 15s65-7 65-15V15"/><text class="t" x="65" y="59" text-anchor="middle">PostgreSQL</text></g>
+  </g>
+
+  <g transform="translate(750 80)">
+    <rect class="panel" width="695" height="310" rx="4"/><text class="k" x="28" y="40">STAGE 2 · READ PRESSURE</text><text class="h" x="28" y="78">Replicas + cache</text><text class="s" x="28" y="108">Scale stateless compute and remove repeated reads from the database.</text>
+    <path class="line" d="M128 205H185M295 205h40M455 175h75M455 235h75"/>
+    <g transform="translate(28 165)"><rect class="node" width="100" height="80" rx="4"/><text class="t" x="50" y="47" text-anchor="middle">Client</text></g>
+    <g transform="translate(185 165)"><rect class="lime" width="110" height="80" rx="40"/><text class="t" x="55" y="36" text-anchor="middle">Load</text><text class="s" x="55" y="57" text-anchor="middle">balancer</text></g>
+    <g transform="translate(335 130)"><rect class="dark" width="120" height="80" rx="4"/><text class="tw" x="60" y="47" text-anchor="middle">API 1</text></g>
+    <g transform="translate(335 220)"><rect class="dark" width="120" height="80" rx="4"/><text class="tw" x="60" y="47" text-anchor="middle">API 2</text></g>
+    <g transform="translate(530 125)"><rect class="blue" width="125" height="80" rx="4"/><text class="t" x="62" y="37" text-anchor="middle">Redis</text><text class="s" x="62" y="58" text-anchor="middle">hot reads</text></g>
+    <g transform="translate(530 220)"><ellipse class="node" cx="63" cy="12" rx="63" ry="12"/><path class="node" d="M0 12v58c0 7 28 12 63 12s63-5 63-12V12"/><text class="t" x="63" y="50" text-anchor="middle">PostgreSQL</text></g>
+  </g>
+
+  <g transform="translate(55 435)">
+    <rect class="panel" width="1390" height="465" rx="4"/><text class="k" x="28" y="42">STAGE 3 · PRODUCTION-SHAPED</text><text class="h" x="28" y="80">Separate the latency path from background work</text><text class="s" x="28" y="110">Edge caching absorbs hot reads; durable events keep analytics off the synchronous request path.</text>
+
+    <path class="line" d="M155 255H220M350 255h60M540 205h70M540 305h70M750 205h90M750 305h90M970 305h90"/>
+    <path class="async" d="M750 205H920V125h140M1190 125h70"/>
+    <text class="k" x="915" y="106" fill="#4e62a8">ASYNC ANALYTICS PATH</text>
+    <g transform="translate(35 215)"><rect class="node" width="120" height="80" rx="4"/><text class="t" x="60" y="36" text-anchor="middle">Users</text><text class="s" x="60" y="58" text-anchor="middle">global traffic</text></g>
+    <g transform="translate(220 205)"><rect class="lime" width="130" height="100" rx="4"/><text class="t" x="65" y="42" text-anchor="middle">CDN / Edge</text><text class="s" x="65" y="68" text-anchor="middle">hot read cache</text></g>
+    <g transform="translate(410 205)"><rect class="dark" width="130" height="100" rx="4"/><text class="tw" x="65" y="42" text-anchor="middle">Gateway</text><text class="sw" x="65" y="68" text-anchor="middle">auth · routing</text></g>
+    <g transform="translate(610 165)"><rect class="dark" width="140" height="80" rx="4"/><text class="tw" x="70" y="47" text-anchor="middle">Service A</text></g>
+    <g transform="translate(610 275)"><rect class="dark" width="140" height="80" rx="4"/><text class="tw" x="70" y="47" text-anchor="middle">Service B</text></g>
+    <g transform="translate(840 165)"><rect class="blue" width="130" height="80" rx="4"/><text class="t" x="65" y="37" text-anchor="middle">Redis</text><text class="s" x="65" y="58" text-anchor="middle">cache</text></g>
+    <g transform="translate(840 275)"><ellipse class="node" cx="65" cy="13" rx="65" ry="13"/><path class="node" d="M0 13v58c0 7 29 13 65 13s65-6 65-13V13"/><text class="t" x="65" y="52" text-anchor="middle">Primary DB</text></g>
+    <g transform="translate(1060 85)"><rect class="blue" width="130" height="80" rx="4"/><text class="t" x="65" y="37" text-anchor="middle">Event bus</text><text class="s" x="65" y="58" text-anchor="middle">durable log</text></g>
+    <g transform="translate(1260 85)"><rect class="node" width="100" height="80" rx="4"/><text class="t" x="50" y="37" text-anchor="middle">Workers</text><text class="s" x="50" y="58" text-anchor="middle">consume</text></g>
+    <g transform="translate(1060 275)"><ellipse class="node" cx="70" cy="13" rx="70" ry="13"/><path class="node" d="M0 13v58c0 7 31 13 70 13s70-6 70-13V13"/><text class="t" x="70" y="52" text-anchor="middle">Read replica</text></g>
+    <g transform="translate(1230 260)"><rect class="node" width="130" height="100" rx="4"/><text class="t" x="65" y="39" text-anchor="middle">Analytics</text><text class="s" x="65" y="62" text-anchor="middle">OLAP store</text><text class="s" x="65" y="81" text-anchor="middle">+ dashboards</text></g>
+  </g>
+  <line x1="985" y1="945" x2="1050" y2="945" stroke="#11120f" stroke-width="3"/><text class="legend" x="1062" y="950">synchronous request path</text><line x1="1240" y1="945" x2="1305" y2="945" stroke="#4e62a8" stroke-width="3" stroke-dasharray="10 8"/><text class="legend" x="1317" y="950">async event path</text>
+</svg>

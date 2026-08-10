@@ -16,10 +16,11 @@ Each blog gets its own folder under [`blogs/`](blogs/). Blog folders are numbere
 blogs/
   01-introduction/
     README.md        # article notes / blog companion
+    assets/          # HLDs, LLDs, flowcharts, mind maps, and other diagrams
     code/            # runnable code for this blog, if applicable
 ```
 
-For implementation-heavy posts, the `code/` directory should include the runnable service, tests, deployment files, load-test scripts, and any local setup instructions needed for that post.
+Prefer SVG for technical diagrams so labels remain sharp, searchable, and editable. For implementation-heavy posts, the `code/` directory should include the runnable service, tests, deployment files, load-test scripts, and any local setup instructions needed for that post.
 
 ## Run the website locally
 

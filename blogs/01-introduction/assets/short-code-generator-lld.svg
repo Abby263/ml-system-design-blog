@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Short-code generator low-level design</title>
+  <desc id="desc">A UML class diagram showing URLService depending on a ShortCodeGenerator protocol implemented by RandomGenerator, Base62SequenceGenerator, and SnowflakeGenerator.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.grid{stroke:#11120f;stroke-opacity:.05}.box{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.interface{fill:#8da8ff;stroke:#11120f;stroke-width:2}.service{fill:#11120f;stroke:#11120f;stroke-width:2}.line{stroke:#11120f;stroke-width:2.5;fill:none}.dash{stroke:#11120f;stroke-width:2.5;stroke-dasharray:10 8;fill:none}.k{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;fill:#777a70}.h{font:700 24px Inter,Arial,sans-serif;fill:#11120f}.hw{font:700 24px Inter,Arial,sans-serif;fill:#fafaf5}.m{font:500 15px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#11120f}.mw{font:500 15px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#dfe1d8}.note{font:500 16px Inter,Arial,sans-serif;fill:#55584f}.label{font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#777a70;letter-spacing:1px}
+    </style>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" class="grid" fill="none"/></pattern>
+  </defs>
+  <rect width="1400" height="760" class="bg"/><rect width="1400" height="760" fill="url(#grid)"/>
+  <text class="k" x="55" y="48">LOW-LEVEL DESIGN · STRATEGY PATTERN + COMPOSITION</text>
+
+  <path class="line" d="M700 300V380"/><path d="M688 380h24l-12 19Z" fill="#fafaf5" stroke="#11120f" stroke-width="2.5"/>
+  <path class="dash" d="M270 535V445H688M700 445H1110V535"/><path d="M258 535h24l-12 19Z" fill="#fafaf5" stroke="#11120f" stroke-width="2.5"/><path d="M688 535h24l-12 19Z" fill="#fafaf5" stroke="#11120f" stroke-width="2.5"/><path d="M1098 535h24l-12 19Z" fill="#fafaf5" stroke="#11120f" stroke-width="2.5"/>
+  <circle cx="700" cy="380" r="7" fill="#d9ff63" stroke="#11120f" stroke-width="2"/>
+  <text class="label" x="722" y="352">HAS-A / INJECTED DEPENDENCY</text>
+  <text class="label" x="730" y="432">IMPLEMENTS</text>
+
+  <g transform="translate(480 90)"><rect class="service" width="440" height="210" rx="4"/><text class="k" x="24" y="35" fill="#d9ff63">SERVICE</text><text class="hw" x="24" y="73">URLService</text><line x1="0" y1="94" x2="440" y2="94" stroke="#4b4e46"/><text class="mw" x="24" y="127">- generator: ShortCodeGenerator</text><line x1="0" y1="149" x2="440" y2="149" stroke="#4b4e46"/><text class="mw" x="24" y="183">+ shorten(url: URL): ShortURL</text></g>
+
+  <g transform="translate(480 390)"><rect class="interface" width="440" height="145" rx="4"/><text class="k" x="24" y="34" fill="#3e4a76">«PROTOCOL»</text><text class="h" x="24" y="72">ShortCodeGenerator</text><line x1="0" y1="92" x2="440" y2="92" stroke="#11120f" stroke-opacity=".25"/><text class="m" x="24" y="122">+ generate(): str</text></g>
+
+  <g transform="translate(80 555)"><rect class="box" width="380" height="145" rx="4"/><text class="k" x="22" y="32">STRATEGY A</text><text class="h" x="22" y="67">RandomGenerator</text><line x1="0" y1="87" x2="380" y2="87" stroke="#11120f" stroke-opacity=".2"/><text class="m" x="22" y="118">+ generate(): str</text></g>
+  <g transform="translate(510 555)"><rect class="box" width="380" height="145" rx="4"/><text class="k" x="22" y="32">STRATEGY B</text><text class="h" x="22" y="67">Base62SequenceGenerator</text><line x1="0" y1="87" x2="380" y2="87" stroke="#11120f" stroke-opacity=".2"/><text class="m" x="22" y="118">+ generate(): str</text></g>
+  <g transform="translate(940 555)"><rect class="box" width="380" height="145" rx="4"/><text class="k" x="22" y="32">STRATEGY C</text><text class="h" x="22" y="67">SnowflakeGenerator</text><line x1="0" y1="87" x2="380" y2="87" stroke="#11120f" stroke-opacity=".2"/><text class="m" x="22" y="118">+ generate(): str</text></g>
+
+  <g transform="translate(965 110)"><rect x="0" y="0" width="315" height="125" rx="4" fill="#d9ff63" stroke="#11120f" stroke-width="2"/><text class="k" x="20" y="30">WHY THIS SHAPE?</text><text class="note" x="20" y="60">URLService stays unchanged</text><text class="note" x="20" y="85">when the ID strategy changes.</text><text class="note" x="20" y="108">Prefer composition over inheritance.</text></g>
+</svg>

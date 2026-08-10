@@ -10,6 +10,11 @@ Bring ML into it and a fresh batch of questions shows up: where do features get 
 
 That's the ground this series is trying to cover — not through fifty disconnected tutorials, but through systems that grow, break, and get rebuilt in front of you.
 
+<figure class="technical-figure">
+  <a href="assets/system-design-mind-map.svg" target="_blank" rel="noreferrer"><img src="assets/system-design-mind-map.svg" alt="Mind map connecting system design to requirements, scale, data, runtime, reliability, operations, and ML-specific concerns"></a>
+  <figcaption>A useful design starts with the questions around the system—not with a preselected stack.</figcaption>
+</figure>
+
 ## Table of Contents
 
 - Why this series exists
@@ -66,6 +71,11 @@ We shouldn't have to relearn caching once ML enters the picture — the better q
 
 Every major design in this series starts life as an interview question. Say the prompt is "design a URL shortener like Bitly." We don't open with "I'll use Redis, Kafka, and Cassandra" — we open with questions. Do links expire? Can users pick custom aliases? Can a destination change after the link is live? Do we need click analytics? What's our daily creation volume, our redirect volume, our availability bar on the redirect path?
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-first-flow.svg" target="_blank" rel="noreferrer"><img src="assets/interview-first-flow.svg" alt="Flowchart showing the interview-first system design process from clarification to architecture evolution"></a>
+  <figcaption>The interview loop: clarify, quantify, establish contracts, draw a baseline, then let new constraints tell you what must change.</figcaption>
+</figure>
+
 None of that is interview theater. Those answers *are* the architecture. And the conversation doesn't stop there — "why PostgreSQL?" should get an answer about access patterns and consistency needs, not "because it scales." Then the ground shifts: a celebrity posts one link and it's suddenly eating 500,000 requests a second. Whatever Redis was doing for you before, you've now got a hot key problem, and edge caching starts looking a lot more interesting. Then: links become editable, and updates need to propagate globally within five seconds. Suddenly your CDN strategy just got a lot more complicated.
 
 That's the shape I want these designs to take — not "here's the correct architecture," but "given these constraints, here's what I'd build, and here's exactly what would make me change my mind."
@@ -85,6 +95,11 @@ PostgreSQL
 ```
 
 Nothing wrong with that — for a small app, it might genuinely be the right call. Then we throw traffic at it. If reads start dominating the request path, we've *earned* the right to add caching, and now we can drop in Redis and actually measure the difference. Later, maybe analytics writes start dragging down redirect latency — that's a real reason to pull analytics off the synchronous path, and suddenly Kafka or Pub/Sub has context instead of just being cargo-culted in.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/architecture-evolution-hld.svg" target="_blank" rel="noreferrer"><img src="assets/architecture-evolution-hld.svg" alt="High-level architecture evolving from one API and database to caching, replicas, an edge layer, and asynchronous analytics"></a>
+  <figcaption>An HLD should preserve the reason each component appeared: first correctness, then read scaling, then separation of the latency-sensitive and asynchronous paths.</figcaption>
+</figure>
 
 The goal isn't reproducing Google's traffic on a laptop. It's building production-shaped systems, pushing them hard enough to expose real architectural behavior, and understanding how they'd keep evolving at a much bigger scale than we can actually simulate.
 
@@ -107,6 +122,11 @@ class ShortCodeGenerator(Protocol):
     def generate(self) -> str:
         ...
 ```
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/short-code-generator-lld.svg" target="_blank" rel="noreferrer"><img src="assets/short-code-generator-lld.svg" alt="UML class diagram for a URL service using interchangeable short-code generation strategies"></a>
+  <figcaption>The Strategy pattern becomes useful here because the URL service depends on a stable contract while generation algorithms vary independently.</figcaption>
+</figure>
 
 Now different strategies can implement that contract, and talking about the Strategy pattern or the Open/Closed principle actually *means* something — the pattern grew out of the problem, we didn't reach for it because it's on a Gang of Four checklist. Same logic applies when Factory, Adapter, Observer, Repository, State, Builder, Saga, Circuit Breaker, or Outbox show up later. And just as often, the right call will be "we don't need a pattern here" — that's architecture too.
 
@@ -138,6 +158,11 @@ Response
 
 That's the serving (data) plane. Somewhere else entirely, a different set of components decides which models are live, which version gets traffic, what the routing policy is, how replicas scale — that's starting to look like a control plane. As the series climbs, we'll keep drawing the line between data plane, control plane, management plane, and observability plane, and asking the question that actually matters: if the control plane vanished for ten minutes, would the data plane keep serving traffic? That tells you more about an architecture than any box-labeling exercise.
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/control-data-plane-hld.svg" target="_blank" rel="noreferrer"><img src="assets/control-data-plane-hld.svg" alt="High-level design separating the model control plane, live inference data plane, and observability plane"></a>
+  <figcaption>The control plane decides desired state; the data plane serves live traffic from its last-known-good configuration; observability watches both without entering the request path.</figcaption>
+</figure>
+
 ## Cloud Architecture
 
 We'll design conceptually before picking a vendor. A queue is a queue before it's SQS, Azure Service Bus, or Pub/Sub. Object storage is a primitive before it's S3, Blob Storage, or GCS. Once the shape of the architecture makes sense, we map it onto whatever cloud fits the scenario — AWS, Azure, GCP, whichever's relevant — touching managed databases, object storage, API gateways, container platforms, Kubernetes, serverless compute, managed messaging, observability tooling, secrets management, IAM, infrastructure as code. Once we're in ML territory, that extends to SageMaker, Azure ML, Vertex AI.
@@ -159,6 +184,11 @@ And none of that means anything if you can't see what the system's actually doin
 The early stretch is intentionally software-heavy — that's the foundation everything else stands on. Then the center of gravity shifts. A recommendation system brings in candidate generation and ranking. Fraud detection forces real-time features and unforgiving latency budgets. A feature store makes you think hard about online versus offline data. A training platform brings experiment tracking, distributed compute, orchestration. Model serving brings deployment strategy, inference scaling, versioning.
 
 Then generative AI changes the workload again — RAG brings embeddings and retrieval, enterprise RAG adds ACL-aware search and tenant isolation, LLM inference brings GPUs, KV caches, batching, token throughput, and multi-agent platforms bring orchestration, tool permissions, state, execution governance. By that point, the distributed-systems ideas from the very first article shouldn't feel like a separate subject anymore — they're just tools you reach for.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/series-roadmap.svg" target="_blank" rel="noreferrer"><img src="assets/series-roadmap.svg" alt="Five-stage roadmap from software foundations to distributed systems, ML systems, generative AI systems, and AI platform architecture"></a>
+  <figcaption>The subject matter changes as the series climbs, but each stage reuses the systems reasoning established below it.</figcaption>
+</figure>
 
 ## Series Index
 
@@ -258,4 +288,3 @@ https://short.ly/a8Ks3
 ```
 
 That's the whole job. Right up until a few million people start clicking it — and that's when it gets interesting.
-

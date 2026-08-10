@@ -82,12 +82,20 @@ const loadBlogs = async () => {
     const subtitle = source.match(/^\*([^\n]+)\*$/m)?.[1]?.trim() ?? "A practical system design case study.";
     const number = Number(entry.name.match(/^(\d+)/)?.[1] ?? blogs.length + 1);
     const codeDirectory = path.join(BLOGS_DIR, entry.name, "code");
+    const assetsDirectory = path.join(BLOGS_DIR, entry.name, "assets");
     let codeFiles = [];
+    let assetFiles = [];
 
     try {
       codeFiles = await walkFiles(codeDirectory);
     } catch {
       codeFiles = [];
+    }
+
+    try {
+      assetFiles = await walkFiles(assetsDirectory);
+    } catch {
+      assetFiles = [];
     }
 
     const words = stripMarkdown(source).split(/\s+/).filter(Boolean).length;
@@ -101,6 +109,8 @@ const loadBlogs = async () => {
       articlePath,
       codeDirectory,
       codeFiles,
+      assetsDirectory,
+      assetFiles,
       readTime: Math.max(1, Math.ceil(words / 220)),
     });
   }
@@ -454,6 +464,12 @@ const build = async () => {
   for (const [index, blog] of blogs.entries()) {
     await writePage(`blogs/${blog.slug}`, articlePage(blog, blogs[index - 1], blogs[index + 1]));
     await writePage(`blogs/${blog.slug}/code`, codeIndexPage(blog));
+
+    for (const asset of blog.assetFiles) {
+      const target = path.join(DIST_DIR, "blogs", blog.slug, "assets", asset.relative);
+      await mkdir(path.dirname(target), { recursive: true });
+      await copyFile(asset.absolute, target);
+    }
 
     for (const file of blog.codeFiles) {
       await writePage(
