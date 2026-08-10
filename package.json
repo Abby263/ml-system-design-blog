@@ -9,7 +9,7 @@
     "dev": "node scripts/dev.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "dependencies": {
     "marked": "^16.0.0"
