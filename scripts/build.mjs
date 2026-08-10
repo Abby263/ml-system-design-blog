@@ -8,6 +8,32 @@ const BLOGS_DIR = path.join(ROOT, "blogs");
 const DIST_DIR = path.join(ROOT, "dist");
 const GITHUB_URL = "https://github.com/Abby263/ml-system-design-blog";
 const SITE_NAME = "Designing ML Systems";
+const CANONICAL_ML_H2 = [
+  "Interview Prompt",
+  "Business Decision and Scope",
+  "Functional Requirements",
+  "Non-Functional Requirements",
+  "Intelligence Problem",
+  "Success Metrics",
+  "Back-of-the-Envelope Estimation",
+  "HLD V0",
+  "Architecture Evolution",
+  "Data and Labels",
+  "Features and Models",
+  "Online Serving and Critical Path",
+  "Reliability, Security, Deployment, and Observability",
+  "LLD and Implementation",
+  "Final Whiteboard and Two-Minute Answer",
+  "References",
+  "What Comes Next",
+];
+const SERIES_STAGES = [
+  { id: "software-foundations", number: "01", title: "Software foundations", description: "APIs, data models, caching, queues, concurrency, reliability.", range: [1, 10] },
+  { id: "distributed-systems", number: "02", title: "Distributed systems", description: "Streaming, coordination, multi-tenancy, and multi-region design.", range: [11, 20] },
+  { id: "ml-system-design", number: "03", title: "ML system design", description: "Features, training, serving, ranking, experimentation, and drift.", range: [21, 30] },
+  { id: "generative-ai", number: "04", title: "Generative AI", description: "RAG, LLM inference, gateways, agents, and enterprise copilots.", range: [31, 40] },
+  { id: "ai-platforms", number: "05", title: "AI platforms", description: "Control planes, evaluation, governance, global serving, and cost.", range: [41, 50] },
+];
 
 const escapeHtml = (value = "") =>
   value
@@ -151,6 +177,18 @@ const loadBlogs = async () => {
     let assetFiles = [];
     const questions = await loadQuestions(blogDirectory, entry.name);
 
+    if (number >= 21 && number <= 30) {
+      const h2 = [...source.matchAll(/^##\s+(.+)$/gm)]
+        .map((match) => stripMarkdown(match[1]))
+        .filter((heading) => heading !== "Table of Contents");
+      if (JSON.stringify(h2) !== JSON.stringify(CANONICAL_ML_H2)) {
+        throw new Error(
+          `${entry.name} must use the canonical ML H2 sequence from docs/ml-system-design-interview-template.md.\n` +
+          `Expected: ${CANONICAL_ML_H2.join(" | ")}\nReceived: ${h2.join(" | ")}`,
+        );
+      }
+    }
+
     try {
       codeFiles = await walkFiles(codeDirectory);
     } catch {
@@ -191,7 +229,7 @@ const nav = (active = "") => `
       <span class="brand-name">Designing ML Systems</span>
     </a>
     <nav class="desktop-nav" aria-label="Primary navigation">
-      <a ${active === "blogs" ? 'aria-current="page"' : ""} href="/blogs/">Writing</a>
+      <a ${active === "blogs" ? 'aria-current="page"' : ""} href="/blogs/">Blogs</a>
       <a ${active === "about" ? 'aria-current="page"' : ""} href="/about/">About</a>
       <button class="theme-toggle" type="button" aria-label="Switch color theme" aria-pressed="false" data-theme-toggle>
         <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>◐</span>
@@ -209,7 +247,7 @@ const nav = (active = "") => `
       </button>
     </div>
     <nav class="mobile-menu" aria-label="Mobile navigation" data-mobile-menu>
-      <a href="/blogs/">Writing</a>
+      <a href="/blogs/">Blogs</a>
       <a href="/about/">About</a>
       <a href="${GITHUB_URL}" target="_blank" rel="noreferrer">GitHub ↗</a>
     </nav>
@@ -222,7 +260,7 @@ const footer = () => `
       <p>Systems are easier to understand once you have watched them fail.</p>
     </div>
     <div class="footer-links">
-      <a href="/blogs/">All writing</a>
+      <a href="/blogs/">All blogs</a>
       <a href="${GITHUB_URL}" target="_blank" rel="noreferrer">Source on GitHub ↗</a>
     </div>
     <p class="footer-note">Designed and built alongside the systems it explains.</p>
@@ -342,7 +380,7 @@ const renderSectionCheck = (question, questionIndex, total, blogSlug) => {
 const insertSectionChecks = (html, questions, blogSlug) => {
   if (!questions.length) return html;
 
-  const sections = [...html.matchAll(/<h2 id="([^"]+)">/g)].map((match) => ({
+  const sections = [...html.matchAll(/<h[23] id="([^"]+)">/g)].map((match) => ({
     id: match[1],
     index: match.index,
   }));
@@ -400,7 +438,7 @@ const codeRoute = (blog, relative) =>
 const blogCard = (blog, featured = false) => `
   <article class="blog-card ${featured ? "featured" : ""}">
     <div class="blog-card-topline">
-      <span>Essay ${String(blog.number).padStart(2, "0")}</span>
+      <span>Blog ${String(blog.number).padStart(2, "0")}</span>
       <span>${blog.readTime} min read</span>
     </div>
     <div>
@@ -408,13 +446,12 @@ const blogCard = (blog, featured = false) => `
       <p>${escapeHtml(blog.subtitle)}</p>
     </div>
     <div class="blog-card-footer">
-      <a class="text-link" href="/blogs/${blog.slug}/">Read the essay <span>→</span></a>
+      <a class="text-link" href="/blogs/${blog.slug}/">Read the blog <span>→</span></a>
       <a class="code-count" href="/blogs/${blog.slug}/code/">${blog.codeFiles.length} companion ${blog.codeFiles.length === 1 ? "file" : "files"}</a>
     </div>
   </article>`;
 
 const homePage = (blogs) => {
-  const latest = blogs.at(-1);
   return page({
     title: `${SITE_NAME} — From first principles to production`,
     description: "Learn software, machine learning, and AI system design by building real systems and evolving them under production constraints.",
@@ -425,7 +462,7 @@ const homePage = (blogs) => {
           <h1>Architecture makes sense<br>once the system <em>breaks.</em></h1>
           <p class="hero-lede">A practical path from software foundations to production ML and AI platforms—one real system, one constraint, and one hard trade-off at a time.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/blogs/${latest.slug}/">Read the latest essay <span>→</span></a>
+            <a class="button button-primary" href="/blogs/">Read the blogs <span>→</span></a>
             <a class="button button-secondary" href="${GITHUB_URL}" target="_blank" rel="noreferrer">Explore the code <span>↗</span></a>
           </div>
         </div>
@@ -457,17 +494,13 @@ const homePage = (blogs) => {
           <p>Five stages, fifty systems, and a steadily rising level of complexity.</p>
         </div>
         <div class="path-grid">
-          <article><span>01</span><div><h3>Software foundations</h3><p>APIs, data models, caching, queues, concurrency, reliability.</p></div><b>10 systems</b></article>
-          <article><span>02</span><div><h3>Distributed systems</h3><p>Streaming, coordination, multi-tenancy, and multi-region design.</p></div><b>10 systems</b></article>
-          <article><span>03</span><div><h3>ML system design</h3><p>Features, training, serving, ranking, experimentation, and drift.</p></div><b>10 systems</b></article>
-          <article><span>04</span><div><h3>Generative AI</h3><p>RAG, LLM inference, gateways, agents, and enterprise copilots.</p></div><b>10 systems</b></article>
-          <article><span>05</span><div><h3>AI platforms</h3><p>Control planes, evaluation, governance, global serving, and cost.</p></div><b>10 systems</b></article>
+          ${SERIES_STAGES.map((stage) => `<a class="stage-card" href="/blogs/#stage-${stage.id}"><span>${stage.number}</span><div><h3>${stage.title}</h3><p>${stage.description}</p></div><b>View stage →</b></a>`).join("")}
         </div>
       </section>
       <section class="latest-section">
         <div class="shell">
-          <div class="section-heading compact"><div><p class="section-number">03 / NOW PUBLISHING</p><h2>Read. Build. Break. Repeat.</h2></div><a class="text-link" href="/blogs/">View all writing <span>→</span></a></div>
-          ${blogCard(latest, true)}
+          <div class="section-heading compact"><div><p class="section-number">03 / PUBLISHED BLOGS</p><h2>Read. Build. Break. Repeat.</h2></div><a class="text-link" href="/blogs/">View all blogs <span>→</span></a></div>
+          <div class="published-blog-list">${blogs.slice().reverse().map((blog) => blogCard(blog)).join("")}</div>
         </div>
       </section>
       <section class="principles shell">
@@ -484,18 +517,24 @@ const homePage = (blogs) => {
 
 const blogsPage = (blogs) =>
   page({
-    title: `Writing — ${SITE_NAME}`,
-    description: "All published essays and companion code from the Designing ML Systems series.",
+    title: `Blogs — ${SITE_NAME}`,
+    description: "All published blogs and companion code from the Designing ML Systems series.",
     active: "blogs",
     body: `
       <section class="page-hero shell">
         <span class="eyebrow"><i></i> THE SERIES</span>
         <h1>Systems, explained<br>from the inside out.</h1>
-        <p>Every essay starts with a plain requirement and follows the architecture as new constraints force it to grow.</p>
+        <p>Every blog starts with a plain requirement and follows the architecture as new constraints force it to grow.</p>
       </section>
       <section class="writing-list shell">
-        <div class="list-header"><span>${String(blogs.length).padStart(2, "0")} published</span><span>Newest first</span></div>
-        ${blogs.slice().reverse().map((blog) => blogCard(blog)).join("")}
+        <div class="list-header"><span>${String(blogs.length).padStart(2, "0")} published blogs</span><span>Grouped by series stage</span></div>
+        ${SERIES_STAGES.map((stage) => {
+          const stageBlogs = blogs.filter((blog) => blog.number >= stage.range[0] && blog.number <= stage.range[1]);
+          return `<section class="blog-stage" id="stage-${stage.id}">
+            <div class="blog-stage-heading"><span>Stage ${stage.number}</span><div><h2>${stage.title}</h2><p>${stage.description}</p></div><b>${stageBlogs.length} published</b></div>
+            ${stageBlogs.length ? stageBlogs.slice().reverse().map((blog) => blogCard(blog)).join("") : `<div class="stage-empty"><strong>Planned stage</strong><p>No blogs from this stage have been published yet. The section remains visible so the complete learning path is navigable.</p></div>`}
+          </section>`;
+        }).join("")}
       </section>`,
   });
 
@@ -518,7 +557,7 @@ const articlePage = (blog, previous, next) => {
     body: `
       <article class="article-shell shell">
         <header class="article-hero" id="article-start">
-          <div class="breadcrumbs"><a href="/blogs/">Writing</a><span>/</span><span>Essay ${String(blog.number).padStart(2, "0")}</span></div>
+          <div class="breadcrumbs"><a href="/blogs/">Blogs</a><span>/</span><span>Blog ${String(blog.number).padStart(2, "0")}</span></div>
           <h1>${escapeHtml(blog.shortTitle)}</h1>
           <p>${escapeHtml(blog.subtitle)}</p>
           <div class="article-meta"><span>${blog.readTime} min read</span><span>${blog.codeFiles.length} companion ${blog.codeFiles.length === 1 ? "file" : "files"}</span><a href="${sourceUrl}" target="_blank" rel="noreferrer">Edit on GitHub ↗</a></div>
@@ -536,12 +575,12 @@ const articlePage = (blog, previous, next) => {
           <aside class="article-toc"><p>On this page</p>${toc}</aside>
           <div class="article-content prose">${renderedContent}</div>
           <aside class="article-aside">
-            <div class="aside-card"><span class="eyebrow">COMPANION REPO</span><h3>Read the source.</h3><p>Browse runnable code, configuration, tests, and notes for this essay.</p><a class="button button-primary" href="/blogs/${blog.slug}/code/">Open code <span>→</span></a></div>
+            <div class="aside-card"><span class="eyebrow">COMPANION REPO</span><h3>Read the source.</h3><p>Browse runnable code, configuration, tests, and notes for this blog.</p><a class="button button-primary" href="/blogs/${blog.slug}/code/">Open code <span>→</span></a></div>
           </aside>
         </div>
         <nav class="article-pagination" aria-label="Article pagination">
           ${previous ? `<a href="/blogs/${previous.slug}/"><small>← Previous</small><strong>${escapeHtml(previous.shortTitle)}</strong></a>` : `<span></span>`}
-          ${next ? `<a class="next" href="/blogs/${next.slug}/"><small>Next →</small><strong>${escapeHtml(next.shortTitle)}</strong></a>` : `<a class="next" href="/blogs/"><small>Continue</small><strong>All writing →</strong></a>`}
+          ${next ? `<a class="next" href="/blogs/${next.slug}/"><small>Next →</small><strong>${escapeHtml(next.shortTitle)}</strong></a>` : `<a class="next" href="/blogs/"><small>Continue</small><strong>All blogs →</strong></a>`}
         </nav>
       </article>`,
   });
@@ -556,7 +595,7 @@ const codeIndexPage = (blog) => {
         <span><strong>${escapeHtml(file.relative)}</strong><small>View rendered source</small></span>
         <span>→</span>
       </a>`).join("")
-    : `<div class="empty-state"><p>No companion code has been published for this essay yet.</p></div>`;
+    : `<div class="empty-state"><p>No companion code has been published for this blog yet.</p></div>`;
 
   return page({
     title: `Code for ${blog.shortTitle} — ${SITE_NAME}`,
@@ -564,11 +603,11 @@ const codeIndexPage = (blog) => {
     active: "blogs",
     body: `
       <section class="code-hero shell">
-        <div class="breadcrumbs"><a href="/blogs/">Writing</a><span>/</span><a href="/blogs/${blog.slug}/">${escapeHtml(blog.shortTitle)}</a><span>/</span><span>Code</span></div>
+        <div class="breadcrumbs"><a href="/blogs/">Blogs</a><span>/</span><a href="/blogs/${blog.slug}/">${escapeHtml(blog.shortTitle)}</a><span>/</span><span>Code</span></div>
         <span class="eyebrow"><i></i> COMPANION CODE</span>
         <h1>${escapeHtml(blog.shortTitle)}</h1>
         <p>Source files, runnable services, tests, configuration, and implementation notes that accompany the design.</p>
-        <div class="hero-actions"><a class="button button-primary" href="${sourceUrl}" target="_blank" rel="noreferrer">Open on GitHub <span>↗</span></a><a class="button button-secondary" href="/blogs/${blog.slug}/">Read the essay <span>→</span></a></div>
+        <div class="hero-actions"><a class="button button-primary" href="${sourceUrl}" target="_blank" rel="noreferrer">Open on GitHub <span>↗</span></a><a class="button button-secondary" href="/blogs/${blog.slug}/">Read the blog <span>→</span></a></div>
       </section>
       <section class="code-browser shell">
         <div class="browser-header"><div><span></span><span></span><span></span></div><p>blogs / ${escapeHtml(blog.slug)} / code</p><small>${blog.codeFiles.length} ${blog.codeFiles.length === 1 ? "file" : "files"}</small></div>
@@ -593,7 +632,7 @@ const renderCodeFile = async (blog, file) => {
     active: "blogs",
     body: `
       <section class="file-page shell">
-        <div class="breadcrumbs"><a href="/blogs/">Writing</a><span>/</span><a href="/blogs/${blog.slug}/">${escapeHtml(blog.shortTitle)}</a><span>/</span><a href="/blogs/${blog.slug}/code/">Code</a></div>
+        <div class="breadcrumbs"><a href="/blogs/">Blogs</a><span>/</span><a href="/blogs/${blog.slug}/">${escapeHtml(blog.shortTitle)}</a><span>/</span><a href="/blogs/${blog.slug}/code/">Code</a></div>
         <div class="file-title-row"><div><span class="file-type">${fileIcon(file.relative)}</span><h1>${escapeHtml(file.relative)}</h1></div><a class="button button-secondary" href="${githubUrl}" target="_blank" rel="noreferrer">GitHub <span>↗</span></a></div>
         <div class="file-stats"><span>${source.split("\n").length} lines</span><span>${humanFileSize(fileStats.size)}</span></div>
         ${markdownPreview}

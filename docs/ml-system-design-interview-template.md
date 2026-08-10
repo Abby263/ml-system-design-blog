@@ -31,9 +31,43 @@ Every classical ML system-design article should cover these stages in this order
 14. **LLD and implementation** — connect service boundaries to contracts, interfaces, concurrency, state, and code.
 15. **Final whiteboard and two-minute answer** — summarize the architecture, key choices, trade-offs, failure risks, and next scaling trigger.
 
+## Canonical H2 contract
+
+Every ML system-design blog must use the following H2 headings, in exactly this order and with exactly this wording. Problem-specific explorations belong under H3 or H4 headings. Do not rename an H2 to make it sound specific to the problem; specificity belongs inside the section.
+
+```text
+## Interview Prompt
+## Business Decision and Scope
+## Functional Requirements
+## Non-Functional Requirements
+## Intelligence Problem
+## Success Metrics
+## Back-of-the-Envelope Estimation
+## HLD V0
+## Architecture Evolution
+## Data and Labels
+## Features and Models
+## Online Serving and Critical Path
+## Reliability, Security, Deployment, and Observability
+## LLD and Implementation
+## Final Whiteboard and Two-Minute Answer
+## References
+## What Comes Next
+```
+
+The first fifteen headings are the interview spine. `References` and `What Comes Next` are the common publishing appendix. No additional H2 headings should be introduced in an ML system-design blog.
+
+If a topic is not applicable, **keep the H2** and make the applicability decision explicit. State:
+
+1. why the concern does not affect this system under the current requirements;
+2. what simpler design follows from that fact;
+3. which requirement or scale trigger would make it applicable later.
+
+For example, a single-region internal model may still include `## Reliability, Security, Deployment, and Observability`, with an H3 explaining why multi-region failover is not justified today and which residency or recovery requirement would change that decision. “Not applicable” is a defended architecture choice, not permission to omit the section.
+
 ## Write it as an interview
 
-The article should feel like an actual interview has been transcribed and lightly cleaned up — not an essay that occasionally quotes two people. Two things make dialogue read as transcribed rather than staged:
+The blog should feel like an actual interview has been transcribed and lightly cleaned up — not a conventional article that occasionally quotes two people. Two things make dialogue read as transcribed rather than staged:
 
 - **Real exchanges have friction.** The interviewer sometimes pushes back, asks "why not X instead," or only half-answers before the candidate asks a follow-up. A clarifying-questions exchange should be several turns long, with the candidate's next question genuinely depending on the previous answer — not a list of questions asked in a vacuum and answered in one shot.
 - **The candidate reasons out loud.** Prefer "That rules out X, which means..." over restating the fact and moving on. The reader should be able to tell *why* an answer mattered, in the candidate's own words, not just that it was given.

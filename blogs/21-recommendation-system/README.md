@@ -25,38 +25,27 @@ This article will build that system three times. The first version is intentiona
 
 ## Table of Contents
 
-- Frame the product before choosing a model
-- Define success without training clickbait
-- High-level design: separate search, scoring, and composition
-- Size the decision funnel and latency budget
-- Scenario 1: ship a useful baseline in weeks
-- Learn from impressions, not clicks alone
-- Establish offline evaluation without temporal leakage
-- Scenario 2: add personalized retrieval and ranking
-- Generate candidates from several kinds of evidence
-- Choose a two-tower retrieval model for factorized serving
-- Add a pre-ranker before the expensive model
-- Pick a ranking model for the data and latency we actually have
-- Re-rank the slate, not twenty independent items
-- Keep online and offline features consistent
-- Build the training and model-release loop
-- Scenario 3: split the global serving path deliberately
-- Decide between a modular monolith and microservices
-- Map the design to AWS and Google Cloud
-- Handle new users, new items, and rapidly changing intent
-- Break feedback loops with logged exposure and exploration
-- Design degradation before dependencies fail
-- Observe data, model, system, and product together
-- Protect users and the creator ecosystem
-- Keep the low-level serving contract testable
-- Run the companion implementation
-- What worked, what failed, and when to evolve
-- Interview follow-ups
-- Interview whiteboard
+- Interview Prompt
+- Business Decision and Scope
+- Functional Requirements
+- Non-Functional Requirements
+- Intelligence Problem
+- Success Metrics
+- Back-of-the-Envelope Estimation
+- HLD V0
+- Architecture Evolution
+- Data and Labels
+- Features and Models
+- Online Serving and Critical Path
+- Reliability, Security, Deployment, and Observability
+- LLD and Implementation
+- Final Whiteboard and Two-Minute Answer
 - References
-- What comes next
+- What Comes Next
 
-## Frame the Product Before Choosing a Model
+## Interview Prompt
+
+### Frame the Product Before Choosing a Model
 
 The prompt is: **Design the personalized home feed for a large video platform.**
 
@@ -93,38 +82,39 @@ The response includes an opaque recommendation request ID. Every impression and 
   <figcaption>Whiteboard checkpoint 1: the candidate keeps the negotiated assumptions visible, separates learned prediction from deterministic policy, and crosses out exhaustive catalog scoring before adding infrastructure. Original diagram for this article.</figcaption>
 </figure>
 
-## Define Success Without Training Clickbait
+## Business Decision and Scope
 
-Maximizing click-through rate is a seductive first objective because labels arrive quickly. It is also easy to game with sensational thumbnails. Raw watch time improves alignment but favors long videos and can reward compulsive consumption. Completion rate favors short videos. Likes and shares are stronger signals but sparse. Retention is closer to business value but delayed and influenced by much more than one feed.
+The interview establishes one bounded product decision: when a person opens the video home feed, choose up to twenty eligible videos before the page deadline. The user is the viewer, the protected entities are the viewer and creator ecosystem, the decision is which slate to show, and the action deadline is the feed response. Search and “up next” remain out of scope because they begin with stronger intent and require different candidate and evaluation contracts.
 
-We will train a multi-task ranker to predict several observable outcomes, then let a versioned value function combine them:
+## Functional Requirements
 
-```text
-utility =
-    0.30 * P(meaningful_watch)
-  + 0.20 * expected_quality_watch_minutes
-  + 0.15 * P(like_or_share)
-  + 0.15 * P(return_within_7d)
-  - 0.20 * P(hide_or_report)
-```
+The system must:
 
-These numbers are policy, not learned truth. They should be tested, audited, and changed without retraining every prediction head. The final slate also has guardrails for policy, creator repetition, topic diversity, freshness, and already-seen content.
+- retrieve a broad candidate set from personalized, social, popularity, freshness, and exploration evidence;
+- remove ineligible, duplicate, blocked, and already-seen items;
+- score progressively smaller candidate sets and compose twenty videos;
+- enforce deterministic safety, diversity, freshness, and creator constraints;
+- return a request ID and record candidates, exposure, positions, versions, and outcomes;
+- support a safe non-personalized fallback.
 
-<aside class="interview-dialogue">
-  <p><strong>Interviewer</strong> Those weights look arbitrary. Where does 0.30 for meaningful watch actually come from?</p>
-  <p><strong>Candidate</strong> It starts as a product decision, not a learned constant. Someone states the priority, we encode it as a weight, and then we test the resulting slate against engagement and hide/report guardrails before it ships. Keeping the value function outside the model is what lets us raise the safety penalty after a bad launch without retraining every prediction head.</p>
-</aside>
+## Non-Functional Requirements
 
-No single metric is the release gate. We track:
+| Constraint | Initial target | Design consequence |
+|---|---:|---|
+| Feed latency | p99 below 200 ms | Parallel retrieval, batched ranking, child deadlines |
+| Peak traffic | About 58,000 feed requests/s | Region-local stateless orchestration and independently scalable stages |
+| Session freshness | Strong actions visible within about one minute | Streaming online state |
+| New-item freshness | Eligible within fifteen minutes | Fast inventory and index-update path |
+| Availability | Feed opens during ML dependency failure | Cached, policy-safe baseline |
+| Audit and learning | Reproduce exposure and versions | Immutable request and impression lineage |
 
-- product: quality-adjusted watch time, seven-day retention, hides/reports, and session satisfaction;
-- ranking: Recall@K for retrieval, NDCG@K for ranking, calibration, coverage, and diversity;
-- ecosystem: exposure across creator cohorts, new-item discovery, and concentration;
-- system: p50/p95/p99 latency, timeout and fallback rate, QPS, and cost per thousand feeds.
+Every item applies here. If a future recommendation surface does not require, for example, multi-region residency, the heading still remains and records why a simpler single-region design is sufficient.
 
-A model ships only if it improves the objective without breaking latency, safety, or ecosystem guardrails.
+## Intelligence Problem
 
-## High-Level Design: Separate Search, Scoring, and Composition
+Learning is bounded to two jobs: retrieve items likely to be relevant to this user and predict useful outcomes for the surviving user-item pairs. Eligibility, safety gates, utility weights, slate constraints, and exposure logging remain deterministic because they express product policy or correctness rather than uncertain prediction.
+
+### High-Level Design: Separate Search, Scoring, and Composition
 
 Before choosing individual models, draw the complete decision path. The request enters with user, session, device, locale, and experiment context. Several candidate generators run in parallel because each source represents different evidence and fails differently. Their results are merged, deduplicated, checked for eligibility, and narrowed by a cheap pre-ranker. Only then do we fetch the richest cross features and spend heavy-model compute. A final policy-aware re-ranker composes the slate, and the response is logged with enough lineage to learn from what the system actually exposed.
 
@@ -155,7 +145,42 @@ The synchronous request path should remain region-local and bounded. Model train
 
 This is the stable architectural spine for all three scenarios in the article. Scenario 1 implements several boxes inside one modular service. Scenario 2 replaces heuristic internals with learned retrieval and ranking. Scenario 3 introduces network boundaries only where scaling, ownership, runtime, or failure isolation requires them.
 
-## Size the Decision Funnel and Latency Budget
+## Success Metrics
+
+### Define Success Without Training Clickbait
+
+Maximizing click-through rate is a seductive first objective because labels arrive quickly. It is also easy to game with sensational thumbnails. Raw watch time improves alignment but favors long videos and can reward compulsive consumption. Completion rate favors short videos. Likes and shares are stronger signals but sparse. Retention is closer to business value but delayed and influenced by much more than one feed.
+
+We will train a multi-task ranker to predict several observable outcomes, then let a versioned value function combine them:
+
+```text
+utility =
+    0.30 * P(meaningful_watch)
+  + 0.20 * expected_quality_watch_minutes
+  + 0.15 * P(like_or_share)
+  + 0.15 * P(return_within_7d)
+  - 0.20 * P(hide_or_report)
+```
+
+These numbers are policy, not learned truth. They should be tested, audited, and changed without retraining every prediction head. The final slate also has guardrails for policy, creator repetition, topic diversity, freshness, and already-seen content.
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Those weights look arbitrary. Where does 0.30 for meaningful watch actually come from?</p>
+  <p><strong>Candidate</strong> It starts as a product decision, not a learned constant. Someone states the priority, we encode it as a weight, and then we test the resulting slate against engagement and hide/report guardrails before it ships. Keeping the value function outside the model is what lets us raise the safety penalty after a bad launch without retraining every prediction head.</p>
+</aside>
+
+No single metric is the release gate. We track:
+
+- product: quality-adjusted watch time, seven-day retention, hides/reports, and session satisfaction;
+- ranking: Recall@K for retrieval, NDCG@K for ranking, calibration, coverage, and diversity;
+- ecosystem: exposure across creator cohorts, new-item discovery, and concentration;
+- system: p50/p95/p99 latency, timeout and fallback rate, QPS, and cost per thousand feeds.
+
+A model ships only if it improves the objective without breaking latency, safety, or ecosystem guardrails.
+
+## Back-of-the-Envelope Estimation
+
+### Size the Decision Funnel and Latency Budget
 
 Assume 100 million daily active users, ten feed requests per active user per day, and a peak-to-average factor of five:
 
@@ -201,7 +226,9 @@ Budgets force design decisions. A candidate source that takes 300 ms does not be
   <figcaption>Whiteboard checkpoint 2: solid arrows are work inside the 200 ms request deadline; dashed blue arrows are replayable background work. The notes preserve the interviewer discussion about child deadlines, partial candidates, and fallback. Original diagram for this article.</figcaption>
 </figure>
 
-## Scenario 1: Ship a Useful Baseline in Weeks
+## HLD V0
+
+### Scenario 1: Ship a Useful Baseline in Weeks
 
 For 100,000 users and 50,000 videos, I would not begin with Kafka, a feature store, a vector database, four model services, and GPU inference. I would begin with a modular service, a relational product database, object storage for artifacts, and a warehouse or analytical database for interaction logs.
 
@@ -236,7 +263,81 @@ Those are measurable reasons to evolve. “Big companies use embeddings” is no
   <figcaption>Scale and measured quality gaps trigger each step; the earlier architecture remains a benchmark and degraded-serving path.</figcaption>
 </figure>
 
-## Learn From Impressions, Not Clicks Alone
+## Architecture Evolution
+
+The candidate states the evolution roadmap before filling in every component: V0 ships a measurable loop, V1 earns learned retrieval and richer ranking when heuristics plateau, and V2 introduces regional cells when scale and failure isolation require them. The previous version remains a benchmark and degraded-serving option.
+
+### Scenario 2: Add Personalized Retrieval and Ranking
+
+At ten million users and ten million active videos, exhaustive scoring is impossible and the heuristic sources plateau. We add learned retrieval, but keep trending, subscriptions, co-watch, and exploration as parallel sources. Candidate diversity at retrieval is insurance: one embedding space will miss intents it was not trained to represent.
+
+The online path becomes:
+
+```text
+request context
+  -> candidate sources in parallel (strict per-source timeout)
+  -> merge + source quotas + dedupe + policy eligibility
+  -> lightweight scoring: 5,000 -> 1,000
+  -> feature hydration
+  -> heavy multi-task ranker: 1,000 -> 200
+  -> slate re-ranker: 200 -> 20
+  -> response + complete exposure log
+```
+
+#### Why not one end-to-end model?
+
+<aside class="interview-dialogue">
+  <p><strong>Interviewer</strong> Why not train one model that goes straight from user to final ranking? It would skip a whole retrieval stage.</p>
+  <p><strong>Candidate</strong> A single cross-feature model that looks at every user-item pair together is expressive, but its forward pass has to run once per pair — fine for two hundred candidates, impossible for ten million. Retrieval needs factorized computation: build the user vector once, then search precomputed item vectors. Retrieval and ranking are optimizing different jobs, recall over a huge space versus precision over a small one, so I keep them as separate stages with separate objectives rather than asking one model to do both.</p>
+</aside>
+
+Google's published YouTube design uses this candidate-generation/ranking split. TensorFlow Recommenders teaches the same serving boundary. Pinterest describes an additional lightweight-scoring stage because sending thousands of weak candidates directly into a heavy ranker wastes serving capacity.
+
+### Scenario 3: Split the Global Serving Path Deliberately
+
+At one billion users, hundreds of millions or billions of items, and roughly 60,000 peak feed QPS, split components according to scaling and failure behavior:
+
+- regional feed orchestrators own deadlines and degradation;
+- candidate services scale by source and index footprint;
+- online feature service scales for high-throughput exact-key reads;
+- pre-ranking CPU fleet handles wide fan-out cheaply;
+- heavy-ranking GPU/accelerator fleet batches candidate tensors;
+- re-ranking library or service owns versioned slate policy;
+- event ingestion decouples client traffic from streaming and training;
+- training platform and model registry remain off the serving path.
+
+Keep user/session computation request-scoped and reused. Batch candidates into one ranker call rather than hundreds of RPCs. Co-locate orchestrator, feature store, ANN shards, and rankers in a region; cross-region calls cannot fit a tight tail-latency budget reliably.
+
+Partition ANN data by model/index version and optionally item eligibility domain, then replicate hot/global indexes regionally. Sharding purely by item ID requires query fan-out to every shard; hierarchical routing or coarse clusters can reduce fan-out at some recall cost. Blog 34 will go deep on billion-scale vector search; here the key is to measure retrieval recall as infrastructure changes.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/global-serving-topology.svg" target="_blank" rel="noreferrer"><img src="assets/global-serving-topology.svg" alt="Global recommendation topology routing users to region-local serving cells with candidate, feature, CPU pre-ranking, GPU ranking, cache, and model bundle components"></a>
+  <figcaption>Cross-region coordination stays out of the request path; each cell serves with a warmed, last-known-good bundle while the global plane trains and rolls out new versions.</figcaption>
+</figure>
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/interview-board-03-global-and-degraded.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-03-global-and-degraded.svg" alt="Hand-drawn recommendation interview whiteboard showing regional serving cells, a global learning and rollout plane, a failure boundary, a five-step degradation ladder, and the measured reasons to introduce microservices"></a>
+  <figcaption>Whiteboard checkpoint 3: regional cells and service boundaries appear only after scale, ownership, runtime, and failure isolation justify them; the previous system remains the degraded path. Original diagram for this article.</figcaption>
+</figure>
+
+### What Worked, What Failed, and When to Evolve
+
+| Stage | What worked | What stopped working | Evolve when |
+|---|---|---|---|
+| Popularity + rules | fast launch, robust fallback, clean data | weak personalization, head bias | cohort/session lift is measurable |
+| Co-watch + GBDT | explainable, cheap CPU scoring | cold start, limited semantic generalization | tail/new-item recall plateaus |
+| Two-tower retrieval | scalable broad personalization | stale index, retrieval bias, weak cross features | catalog makes exhaustive methods impossible |
+| Pre-ranker | protects expensive compute | may prune rare valuable items | heavy-ranker cost/latency dominates |
+| Multi-task ranker | richer objective and calibration | label conflict, serving cost | baseline misses meaningful interactions |
+| Sequence ranker | captures changing intent | GPU cost, complexity, long-tail latency | online gains justify full lifecycle cost |
+| Microservices | independent scaling and isolation | RPC/version/on-call complexity | distinct resource/ownership boundaries are real |
+| Foundation representation | reuse across many surfaces | training cost, compatibility, central bottleneck | duplicated specialized stacks become the larger cost |
+
+The mature system does not delete earlier stages. Trending remains cold-start and disaster fallback. Co-watch remains an independent source. The GBDT remains a shadow baseline and degraded ranker. Evolution adds options and failure isolation, not just complexity.
+
+## Data and Labels
+
+### Learn From Impressions, Not Clicks Alone
 
 The event schema is part of the model architecture. For every feed request, log one request record and one row per candidate or returned item:
 
@@ -271,7 +372,7 @@ For privacy and cost, request-level context should be stored once and referenced
   <figcaption>The system learns from the exposure it created; impression logging, controlled exploration, and stable holdouts keep that loop observable.</figcaption>
 </figure>
 
-## Establish Offline Evaluation Without Temporal Leakage
+### Establish Offline Evaluation Without Temporal Leakage
 
 Random train/test splitting lets tomorrow teach yesterday. Instead, choose a cutoff:
 
@@ -290,33 +391,26 @@ Replay the complete funnel, not only the heavy ranker. Measure candidate Recall@
 
 Offline metrics are release evidence, not proof of product value. They inherit exposure and position bias from the old policy. Shadow ranking checks correctness, latency, score distribution, and candidate changes without affecting users. A guarded A/B test then measures short-term engagement and longer-term return behavior. Keep a long-running holdout or exploration bucket to detect whether the system is training on its own echo.
 
-## Scenario 2: Add Personalized Retrieval and Ranking
+### Break Feedback Loops With Logged Exposure and Exploration
 
-At ten million users and ten million active videos, exhaustive scoring is impossible and the heuristic sources plateau. We add learned retrieval, but keep trending, subscriptions, co-watch, and exploration as parallel sources. Candidate diversity at retrieval is insurance: one embedding space will miss intents it was not trained to represent.
+The model controls exposure; exposure creates labels; labels train the model. Popularity can become self-fulfilling, and a creator the model never explores can never prove quality.
 
-The online path becomes:
+Mitigations include:
 
-```text
-request context
-  -> candidate sources in parallel (strict per-source timeout)
-  -> merge + source quotas + dedupe + policy eligibility
-  -> lightweight scoring: 5,000 -> 1,000
-  -> feature hydration
-  -> heavy multi-task ranker: 1,000 -> 200
-  -> slate re-ranker: 200 -> 20
-  -> response + complete exposure log
-```
+- log all shown positions and selection propensities;
+- reserve a small, safe exploration budget;
+- randomize within bounded eligible sets rather than across the whole catalog;
+- use inverse-propensity weighting or counterfactual methods cautiously;
+- keep a stable randomized data slice for evaluation;
+- normalize engagement by item age and exposure opportunity;
+- monitor coverage and concentration by cohort;
+- let explicit negative feedback propagate quickly.
 
-### Why not one end-to-end model?
+Exploration has a user cost. Security, age, rights, and quality filters apply before exploration. Never describe “random traffic” without an eligibility boundary and an experiment budget.
 
-<aside class="interview-dialogue">
-  <p><strong>Interviewer</strong> Why not train one model that goes straight from user to final ranking? It would skip a whole retrieval stage.</p>
-  <p><strong>Candidate</strong> A single cross-feature model that looks at every user-item pair together is expressive, but its forward pass has to run once per pair — fine for two hundred candidates, impossible for ten million. Retrieval needs factorized computation: build the user vector once, then search precomputed item vectors. Retrieval and ranking are optimizing different jobs, recall over a huge space versus precision over a small one, so I keep them as separate stages with separate objectives rather than asking one model to do both.</p>
-</aside>
+## Features and Models
 
-Google's published YouTube design uses this candidate-generation/ranking split. TensorFlow Recommenders teaches the same serving boundary. Pinterest describes an additional lightweight-scoring stage because sending thousands of weak candidates directly into a heavy ranker wastes serving capacity.
-
-## Generate Candidates From Several Kinds of Evidence
+### Generate Candidates From Several Kinds of Evidence
 
 Run generators concurrently and attach provenance:
 
@@ -333,7 +427,7 @@ Each source returns perhaps 200–2,000 items. Merge by item ID, retain every so
 
 Source timeouts are independent. A graph service timing out should reduce candidate breadth, not fail the feed. Monitor source recall conditional on the eventual positive outcome; a healthy endpoint that contributes no useful items is still unhealthy for the product.
 
-## Choose a Two-Tower Retrieval Model for Factorized Serving
+### Choose a Two-Tower Retrieval Model for Factorized Serving
 
 The query tower consumes user and request context; the item tower consumes item attributes:
 
@@ -370,7 +464,7 @@ Item embeddings are computed offline and loaded into a versioned approximate-nea
 
 Inner product and cosine are not interchangeable. Dot product includes item-vector norm and may favor frequent items; normalized vectors produce cosine similarity. Choose intentionally and test popularity distribution.
 
-## Add a Pre-Ranker Before the Expensive Model
+### Add a Pre-Ranker Before the Expensive Model
 
 The pre-ranker sees thousands of candidates and must be cheap. A well-tuned GBDT or small MLP on retrieval scores, source IDs, item quality/freshness, coarse user affinity, and policy features often beats the operational economics of a large neural model here.
 
@@ -383,19 +477,19 @@ What failed before this stage existed? Heavy-ranking 5,000 candidates made p99 l
   <p><strong>Candidate</strong> We effectively tried that on paper first — heavy-ranking five thousand candidates blows the latency and cost budget before model choice even matters. The pre-ranker's only job is protecting that expensive stage, which is why I train it to preserve the heavy ranker's top picks rather than let it develop its own opinion about what's good.</p>
 </aside>
 
-## Pick a Ranking Model for the Data and Latency We Actually Have
+### Pick a Ranking Model for the Data and Latency We Actually Have
 
 Model progression should be earned:
 
-### Logistic regression or GBDT
+#### Logistic regression or GBDT
 
 This is the right first learned ranker for tabular engagement, freshness, and affinity features. It trains quickly, runs cheaply on CPU, calibrates reasonably, and is easy to inspect. It struggles with sparse IDs and long behavior sequences unless those are summarized upstream.
 
-### DLRM-style feature interaction model
+#### DLRM-style feature interaction model
 
 Separate sparse embeddings from dense features and learn their interactions. This is useful when high-cardinality user/item/creator IDs and tabular context dominate. It is more scalable and expressive than concatenating everything into a plain MLP, but it still treats a summarized history more like a bag than an ordered session.
 
-### Transformer sequence ranker
+#### Transformer sequence ranker
 
 Represent recent actions as a time-ordered sequence, including action type and dwell. Cross-attend each candidate to the user context. This captures short-term intent changes and interactions between candidates and history, but it raises GPU cost, tail latency, training complexity, and debugging burden.
 
@@ -420,11 +514,11 @@ Multi-task learning shares representations and exposes tradeoffs. The value laye
   <figcaption>Compute shared request context once, score candidates as a batch, keep observable outcomes in separate calibrated heads, and apply product priorities in a versioned value layer.</figcaption>
 </figure>
 
-### Follow one candidate through the ranker
+#### Follow one candidate through the ranker
 
 The request branch encodes recent actions once. Each surviving candidate contributes item and creator embeddings, freshness, quality, and retrieval provenance. The interaction layer combines that candidate with the shared request representation and dense cross features. Separate heads predict observable outcomes; calibration makes scores comparable; the value function converts those predictions into a scalar utility for slate composition. This boundary keeps model learning, business policy, and list-level constraints independently testable.
 
-## Re-Rank the Slate, Not Twenty Independent Items
+### Re-Rank the Slate, Not Twenty Independent Items
 
 Sorting by item utility alone produces near-duplicates: five videos from one creator, ten clips about the same topic, or a page with no fresh content. Re-ranking operates on the list:
 
@@ -448,7 +542,7 @@ Hard constraints—blocked creator, age restriction, unavailable rights, already
 
 Re-ranking must remain deterministic given request ID, candidates, and policy version so incidents can be replayed. Log when a high-scoring item was removed and why.
 
-## Keep Online and Offline Features Consistent
+### Keep Online and Offline Features Consistent
 
 Organize features by entity and freshness:
 
@@ -464,7 +558,7 @@ A feature registry can define ownership, schema, transformation, freshness SLO, 
 
 Pass an explicit feature timestamp and model bundle version through the request. If a real-time feature is late, use a documented default plus missingness indicator. Silent zero is often a real value and hides pipeline failure.
 
-## Build the Training and Model-Release Loop
+### Build the Training and Model-Release Loop
 
 The offline pipeline is a DAG with immutable inputs and outputs:
 
@@ -491,34 +585,29 @@ Release gates include data validation, offline ranking and calibration, ANN reca
   <figcaption>Only immutable, compatibility-checked bundles cross into serving; exposure and outcomes return through the data plane rather than coupling requests to training.</figcaption>
 </figure>
 
-## Scenario 3: Split the Global Serving Path Deliberately
+### Handle New Users, New Items, and Rapidly Changing Intent
 
-At one billion users, hundreds of millions or billions of items, and roughly 60,000 peak feed QPS, split components according to scaling and failure behavior:
+#### New user
 
-- regional feed orchestrators own deadlines and degradation;
-- candidate services scale by source and index footprint;
-- online feature service scales for high-throughput exact-key reads;
-- pre-ranking CPU fleet handles wide fan-out cheaply;
-- heavy-ranking GPU/accelerator fleet batches candidate tensors;
-- re-ranking library or service owns versioned slate policy;
-- event ingestion decouples client traffic from streaming and training;
-- training platform and model registry remain off the serving path.
+Start with locale/device/time-aware trending, onboarding topics, referral context, and controlled exploration. Adapt within the session using recent actions without waiting for full retraining. Do not overuse demographic inference; coarse context can be sensitive and stereotypical.
 
-Keep user/session computation request-scoped and reused. Batch candidates into one ranker call rather than hundreds of RPCs. Co-locate orchestrator, feature store, ANN shards, and rankers in a region; cross-region calls cannot fit a tight tail-latency budget reliably.
+#### New item
 
-Partition ANN data by model/index version and optionally item eligibility domain, then replicate hot/global indexes regionally. Sharding purely by item ID requires query fan-out to every shard; hierarchical routing or coarse clusters can reduce fan-out at some recall cost. Blog 34 will go deep on billion-scale vector search; here the key is to measure retrieval recall as infrastructure changes.
+Generate content-based embeddings from title, metadata, audio/visual signals, and creator context. Place safe new items into an exploration pool and compare engagement against age-normalized expectations. Collaborative signals arrive later. Google's content-based related-video research specifically addresses this gap.
 
-<figure class="technical-figure wide-figure">
-  <a href="assets/global-serving-topology.svg" target="_blank" rel="noreferrer"><img src="assets/global-serving-topology.svg" alt="Global recommendation topology routing users to region-local serving cells with candidate, feature, CPU pre-ranking, GPU ranking, cache, and model bundle components"></a>
-  <figcaption>Cross-region coordination stays out of the request path; each cell serves with a warmed, last-known-good bundle while the global plane trains and rolls out new versions.</figcaption>
-</figure>
+#### Returning user with a new intent
 
-<figure class="technical-figure wide-figure">
-  <a href="assets/interview-board-03-global-and-degraded.svg" target="_blank" rel="noreferrer"><img src="assets/interview-board-03-global-and-degraded.svg" alt="Hand-drawn recommendation interview whiteboard showing regional serving cells, a global learning and rollout plane, a failure boundary, a five-step degradation ladder, and the measured reasons to introduce microservices"></a>
-  <figcaption>Whiteboard checkpoint 3: regional cells and service boundaries appear only after scale, ownership, runtime, and failure isolation justify them; the previous system remains the degraded path. Original diagram for this article.</figcaption>
-</figure>
+Blend long-term and session representations with a learned or rule-based gate. Someone who usually watches cooking videos but is currently researching bicycles should not be trapped by lifetime history. Monitor how quickly recommendations respond after a strong action.
 
-## Decide Between a Modular Monolith and Microservices
+#### Anonymous user
+
+Use a consented session ID and session actions; otherwise serve contextual/trending content. Merge anonymous history into an account only under a clear identity and privacy contract.
+
+## Online Serving and Critical Path
+
+The online path is applicable and central: the feed waits for bounded candidate retrieval, eligibility, pre-ranking, feature hydration, heavy ranking, and slate composition. Training, index construction, outcome joins, and artifact promotion remain asynchronous. The service boundary discussion below decides when those logical stages should become network boundaries.
+
+### Decide Between a Modular Monolith and Microservices
 
 Microservices are not an ML maturity badge.
 
@@ -542,7 +631,9 @@ Costs of splitting include network tail latency, serialization, version skew, du
 
 A useful boundary test is: **Can the feed orchestrator produce a safe response if this service disappears for ten minutes?** If not, either the dependency is too tightly coupled or its fallback is unfinished.
 
-## Map the Design to AWS and Google Cloud
+## Reliability, Security, Deployment, and Observability
+
+### Map the Design to AWS and Google Cloud
 
 The architecture is vendor-neutral, but production choices should be concrete.
 
@@ -562,42 +653,7 @@ For an early team, Amazon Personalize or another managed recommender can provide
 
 On either cloud, deploy serving across at least two availability zones, keep immutable artifacts in object storage, provision fallback capacity, and separate training IAM from online serving IAM. GPUs should serve the stage that earns them; candidate filters and GBDTs usually belong on CPU.
 
-## Handle New Users, New Items, and Rapidly Changing Intent
-
-### New user
-
-Start with locale/device/time-aware trending, onboarding topics, referral context, and controlled exploration. Adapt within the session using recent actions without waiting for full retraining. Do not overuse demographic inference; coarse context can be sensitive and stereotypical.
-
-### New item
-
-Generate content-based embeddings from title, metadata, audio/visual signals, and creator context. Place safe new items into an exploration pool and compare engagement against age-normalized expectations. Collaborative signals arrive later. Google's content-based related-video research specifically addresses this gap.
-
-### Returning user with a new intent
-
-Blend long-term and session representations with a learned or rule-based gate. Someone who usually watches cooking videos but is currently researching bicycles should not be trapped by lifetime history. Monitor how quickly recommendations respond after a strong action.
-
-### Anonymous user
-
-Use a consented session ID and session actions; otherwise serve contextual/trending content. Merge anonymous history into an account only under a clear identity and privacy contract.
-
-## Break Feedback Loops With Logged Exposure and Exploration
-
-The model controls exposure; exposure creates labels; labels train the model. Popularity can become self-fulfilling, and a creator the model never explores can never prove quality.
-
-Mitigations include:
-
-- log all shown positions and selection propensities;
-- reserve a small, safe exploration budget;
-- randomize within bounded eligible sets rather than across the whole catalog;
-- use inverse-propensity weighting or counterfactual methods cautiously;
-- keep a stable randomized data slice for evaluation;
-- normalize engagement by item age and exposure opportunity;
-- monitor coverage and concentration by cohort;
-- let explicit negative feedback propagate quickly.
-
-Exploration has a user cost. Security, age, rights, and quality filters apply before exploration. Never describe “random traffic” without an eligibility boundary and an experiment budget.
-
-## Design Degradation Before Dependencies Fail
+### Design Degradation Before Dependencies Fail
 
 The feed orchestrator uses one request deadline and smaller child deadlines. It never retries a slow candidate or ranking call multiple times inside the user request; retries amplify tail load and may miss the deadline anyway.
 
@@ -619,7 +675,7 @@ Cache final feeds briefly by `(user, session-context-version, model-bundle)`, bu
 
 Load shedding should protect transactional feed traffic from bulk precomputation and shadow models. Shadow inference has a hard resource quota and is the first traffic removed during pressure.
 
-## Observe Data, Model, System, and Product Together
+### Observe Data, Model, System, and Product Together
 
 Four layers need joined telemetry:
 
@@ -635,7 +691,7 @@ Use the request ID to trace candidate provenance through every stage without log
 
 Alert on SLOs and user impact, not every distribution movement. Drift is a diagnostic signal, not an automatic retraining command.
 
-## Protect Users and the Creator Ecosystem
+### Protect Users and the Creator Ecosystem
 
 Minimize and retain behavioral data deliberately. Hash or tokenize user identifiers in analytical logs, isolate identity maps, encrypt data, enforce purpose-limited access, and support deletion across raw events, features, training sets, and caches. Aggregate where per-user history is unnecessary.
 
@@ -643,7 +699,9 @@ Policy filtering is defense in depth: eligibility before retrieval where possibl
 
 Recommendation objectives shape creator behavior. Monitor whether exposure collapses onto a tiny head, whether new creators receive viable tests, and whether optimizing watch time increases reports or decreases long-term satisfaction. Publish and audit value-function changes like product policy.
 
-## Keep the Low-Level Serving Contract Testable
+## LLD and Implementation
+
+### Keep the Low-Level Serving Contract Testable
 
 The orchestrator depends on narrow interfaces:
 
@@ -674,7 +732,7 @@ validate request
   -> emit response and durable exposure event
 ```
 
-## Run the Companion Implementation
+### Run the Companion Implementation
 
 The runnable example in [`code/`](code/) is small enough to understand but preserves the production boundaries:
 
@@ -700,22 +758,13 @@ curl 'http://localhost:8000/v1/recommendations?user_id=user-17&limit=10'
 
 The demo uses exact NumPy similarity search because its catalog is tiny. The `Retriever` interface marks the production seam for Faiss, ScaNN, OpenSearch, or a managed vector service. Hiding approximate search behind that interface does not hide its quality requirement: production must continuously compare ANN Recall@K against exact or higher-recall reference queries.
 
-## What Worked, What Failed, and When to Evolve
+## Final Whiteboard and Two-Minute Answer
 
-| Stage | What worked | What stopped working | Evolve when |
-|---|---|---|---|
-| Popularity + rules | fast launch, robust fallback, clean data | weak personalization, head bias | cohort/session lift is measurable |
-| Co-watch + GBDT | explainable, cheap CPU scoring | cold start, limited semantic generalization | tail/new-item recall plateaus |
-| Two-tower retrieval | scalable broad personalization | stale index, retrieval bias, weak cross features | catalog makes exhaustive methods impossible |
-| Pre-ranker | protects expensive compute | may prune rare valuable items | heavy-ranker cost/latency dominates |
-| Multi-task ranker | richer objective and calibration | label conflict, serving cost | baseline misses meaningful interactions |
-| Sequence ranker | captures changing intent | GPU cost, complexity, long-tail latency | online gains justify full lifecycle cost |
-| Microservices | independent scaling and isolation | RPC/version/on-call complexity | distinct resource/ownership boundaries are real |
-| Foundation representation | reuse across many surfaces | training cost, compatibility, central bottleneck | duplicated specialized stacks become the larger cost |
+### Two-Minute Interview Answer
 
-The mature system does not delete earlier stages. Trending remains cold-start and disaster fallback. Co-watch remains an independent source. The GBDT remains a shadow baseline and degraded ranker. Evolution adds options and failure isolation, not just complexity.
+I would start with a modular feed service that blends understandable candidate sources, a lightweight ranker, deterministic eligibility and slate constraints, and complete exposure logging. At larger catalog scale I would add multi-source learned retrieval, a cheap pre-ranker, one batched multi-task ranker, and streaming session state while keeping policy outside the model. At global scale I would deploy region-local serving cells and distribute immutable model bundles asynchronously. The largest risks are retrieval loss, feedback bias, stale features, tail latency, and concentration, so the design measures recall at every funnel stage and retains a policy-safe fallback. The next scaling triggers are ANN shard pressure, feature-store tail latency, and accelerator saturation—not an arbitrary desire for more services.
 
-## Interview Follow-Ups
+### Interview Follow-Ups
 
 **Why candidate generation instead of scoring every item?**
 
@@ -753,7 +802,7 @@ Product and ranking leads own them jointly, and they're versioned like policy ra
 
 The funnel remains, but eligibility adds inventory, price, shipping, and seller constraints; labels emphasize conversion and margin; delayed purchase attribution matters; item freshness is different; and business re-ranking may include stock and marketplace fairness.
 
-## Interview Whiteboard
+### Interview Whiteboard
 
 The three whiteboard checkpoints above are views from one board that evolves from requirements to HLD V0, the multi-stage learning system, and global degraded serving. The shared snapshot opens as an editable local copy in Excalidraw; the repository file is the durable source of truth.
 
