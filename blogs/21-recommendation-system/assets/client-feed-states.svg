@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 650" role="img" aria-labelledby="title desc">
+  <title id="title">App client states for a home-feed response</title>
+  <desc id="desc">The app client calls GET /v1/recommendations once per feed load and must handle a cold personalized response, a degraded non-personalized response, and a stale locally cached response differently, while never rendering raw scores or rejected candidates.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:2.5;marker-end:url(#arrow)}
+      .k{font:700 12px ui-monospace,monospace;letter-spacing:1.4px;fill:#777a70}.h{font:700 22px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 15px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 15px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 11.5px Inter,Arial,sans-serif;fill:#55584f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+  </defs>
+  <rect class="bg" width="1500" height="650"/>
+  <text class="k" x="50" y="42">FRONTEND AND CLIENT ARCHITECTURE</text>
+  <text class="h" x="50" y="76">One feed request; three response shapes the client must render identically well.</text>
+
+  <g transform="translate(50 290)"><rect class="dark" width="230" height="80" rx="5"/><text class="tw" x="115" y="34" text-anchor="middle">App client</text><text class="tw" x="115" y="56" text-anchor="middle" style="font:500 11px ui-monospace,monospace">GET /v1/recommendations</text></g>
+
+  <path class="arrow" d="M280 305 380 160"/>
+  <path class="arrow" d="M280 330 380 280"/>
+  <path class="arrow" d="M280 355 380 400"/>
+
+  <g transform="translate(380 110)"><rect class="lime" width="330" height="120" rx="5"/><text class="t" x="20" y="30">Cold response</text><text class="s" x="20" y="53">Personalized slate inside the 200 ms</text><text class="s" x="20" y="71">budget. Client renders it and starts</text><text class="s" x="20" y="89">sending impression/dwell events</text><text class="s" x="20" y="107">immediately, keyed by request ID.</text></g>
+
+  <g transform="translate(380 250)"><rect class="node" width="330" height="120" rx="5"/><text class="t" x="20" y="30">Degraded response</text><text class="s" x="20" y="53">Same response shape, `degraded: true`,</text><text class="s" x="20" y="71">non-personalized cached slate. Renders</text><text class="s" x="20" y="89">exactly like a normal feed — a blank</text><text class="s" x="20" y="107">screen is worse than a generic one.</text></g>
+
+  <g transform="translate(380 390)"><rect class="blue" width="330" height="120" rx="5"/><text class="t" x="20" y="30">Stale-cache response</text><text class="s" x="20" y="53">On cold start or a slow network, a</text><text class="s" x="20" y="71">short-lived local cache paints first,</text><text class="s" x="20" y="89">then swaps to the live response —</text><text class="s" x="20" y="107">first paint never blocks on the network.</text></g>
+
+  <rect class="group" x="770" y="110" width="680" height="400" rx="6"/>
+  <text class="k" x="794" y="146">CLIENT-SIDE RULES THAT HOLD FOR ALL THREE</text>
+
+  <text class="t" x="794" y="188">The client never renders a raw ranking score,</text>
+  <text class="s" x="794" y="208">a rejected candidate, or an internal reason code —</text>
+  <text class="s" x="794" y="226">those exist for logging and replay, not for a viewer.</text>
+
+  <text class="t" x="794" y="268">Local within-session dedupe is the client's job</text>
+  <text class="s" x="794" y="288">— cheaper to guarantee against what the user has</text>
+  <text class="s" x="794" y="306">already scrolled past than round-tripping every</text>
+  <text class="s" x="794" y="324">scroll position to the server.</text>
+
+  <text class="t" x="794" y="366">Every impression event carries the request ID,</text>
+  <text class="s" x="794" y="386">item ID, and position — without it, a click means</text>
+  <text class="s" x="794" y="404">little: the server can't tell what else was shown.</text>
+
+  <rect class="muted" x="794" y="432" width="632" height="58" rx="5"/>
+  <text class="s" x="814" y="456">A visibility/dwell rule, not a raw impression, decides</text>
+  <text class="s" x="814" y="474">whether an item counts as "shown" for training.</text>
+</svg>

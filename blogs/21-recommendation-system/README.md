@@ -50,7 +50,7 @@ This article will build that system three times. The first version is intentiona
 The prompt is: **Design the personalized home feed for a large video platform.**
 
 <aside class="interview-dialogue">
-  <p><strong>Interviewer</strong> Design the personalized home feed for a large video platform.</p>
+  <p><strong>Interviewer</strong> When someone opens the app, we show them a home feed of videos chosen specifically for them — think YouTube's homepage, or Netflix right after you pick a profile. We need to select and rank videos from a catalog of tens of millions of items, personalized to that viewer, in well under a second. Design the system that powers this, end to end.</p>
   <p><strong>Candidate</strong> Before I sketch anything, I have a few questions — this could mean fairly different systems depending on the answers. First: which surface is this? A home feed, "up next," and search all end in a ranked list of videos, but they start from very different amounts of intent.</p>
   <p><strong>Interviewer</strong> The home feed — the first screen someone sees when they open the app.</p>
   <p><strong>Candidate</strong> Good, that's the hardest of the three, since there's no explicit query and no current video to anchor on. What can a user actually do with a recommended video besides watch it? I'm asking because the action set determines what labels I'll have to work with later.</p>
@@ -337,6 +337,26 @@ The mature system does not delete earlier stages. Trending remains cold-start an
 
 ## Data and Labels
 
+### System API Design
+
+The synchronous contract is one endpoint: `GET /v1/recommendations?user_id={id}&limit=20`. Versioning lives in the URL prefix so a breaking response change ships as `/v2/` rather than mutating what `/v1/` callers already depend on. The response is not just a list of video IDs — it's a decision record with enough lineage to learn from later:
+
+```json
+{
+  "request_id": "rec_01J...",
+  "user_id": "user-17",
+  "items": [
+    { "item_id": "vid_88213", "position": 0, "source": "two_tower_ann", "score": 0.812 },
+    { "item_id": "vid_44071", "position": 1, "source": "trending", "score": 0.774 }
+  ],
+  "model_bundle_version": "rec-bundle-2026-08-09.5",
+  "policy_version": "slate-policy-v9",
+  "degraded": false
+}
+```
+
+Every client interaction — an impression, a watch, a hide — reports back against that same `request_id`, item, and position; that's what makes the candidate-level logging described below possible at all. Error semantics stay small: `400` for a malformed request, and a documented degraded response (still `200`, with `degraded: true` and a non-personalized slate) rather than a bare `503` whenever a safe fallback exists. The client never blocks the feed opening while waiting on a retry against this endpoint.
+
 ### Learn From Impressions, Not Clicks Alone
 
 The event schema is part of the model architecture. For every feed request, log one request record and one row per candidate or returned item:
@@ -607,7 +627,7 @@ Use a consented session ID and session actions; otherwise serve contextual/trend
 
 The online path is applicable and central: the feed waits for bounded candidate retrieval, eligibility, pre-ranking, feature hydration, heavy ranking, and slate composition. Training, index construction, outcome joins, and artifact promotion remain asynchronous. The service boundary discussion below decides when those logical stages should become network boundaries.
 
-### Decide Between a Modular Monolith and Microservices
+### Backend Architecture: Services and Boundaries
 
 Microservices are not an ML maturity badge.
 
@@ -627,9 +647,31 @@ Split a module when at least one condition is real:
 - data locality/security: sensitive features need narrower access;
 - technology constraint: index or inference runtime requires a distinct stack.
 
+<figure class="technical-figure wide-figure">
+  <a href="assets/backend-services-boundary.svg" target="_blank" rel="noreferrer"><img src="assets/backend-services-boundary.svg" alt="Backend service boundary diagram showing the Scenario 1 modular monolith modules on the left and the Scenario 3 extracted regional orchestrator, candidate services, feature service, pre-ranking CPU fleet, ranking GPU fleet, re-ranking service, event ingestion, and training platform on the right, each tagged with its scaling, release, or failure-isolation reason"></a>
+  <figcaption>Every extracted box answers one question: what measured scaling, release, or failure boundary justified paying for the network hop?</figcaption>
+</figure>
+
 Costs of splitting include network tail latency, serialization, version skew, duplicated context, distributed tracing, and more complicated fallback. Define protobuf/typed schemas, deadlines, batch APIs, compatibility windows, and ownership before splitting.
 
 A useful boundary test is: **Can the feed orchestrator produce a safe response if this service disappears for ten minutes?** If not, either the dependency is too tightly coupled or its fallback is unfinished.
+
+### Frontend and Client Architecture
+
+The client is the app surface that renders the feed, not a party to the ranking decision. It calls `GET /v1/recommendations` once per feed load, renders whatever eligible, deduplicated videos come back, and — this is the part that closes the learning loop — reports back which of them actually became visible and for how long, using the same request ID the server issued.
+
+Three states the client has to handle explicitly:
+
+- **Cold response.** The feed service responds inside its 200 ms budget with a personalized slate; the client renders it and starts sending impression/dwell events immediately.
+- **Degraded response.** The response carries the same shape but with `degraded: true` and a non-personalized, cached, policy-safe slate. The client renders it exactly the same way — a degraded feed should look like a feed, not an error state, because a blank home screen is a worse outcome than a less-personalized one.
+- **Stale-cache response.** On a cold app start or a slow network, the client may show a short-lived locally cached slate immediately, then swap in the live response once it arrives, rather than blocking the first paint on a network round trip.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/client-feed-states.svg" target="_blank" rel="noreferrer"><img src="assets/client-feed-states.svg" alt="Diagram showing the app client calling GET /v1/recommendations and handling a cold personalized response, a degraded non-personalized response, and a stale locally cached response, plus client-side rules about not rendering raw scores and reporting impressions by request ID"></a>
+  <figcaption>Three response shapes, one rendering path: the client's job is to display whatever it receives consistently, not to guess why a slate looks the way it does.</figcaption>
+</figure>
+
+The client never renders a raw ranking score, a rejected candidate, or an internal reason code — those exist for logging and debugging, not for a viewer. It does own deduplication against what the user has already scrolled past within the session, since that's cheaper to guarantee locally than by round-tripping every scroll position to the server.
 
 ## Reliability, Security, Deployment, and Observability
 
@@ -717,6 +759,11 @@ class SlatePolicy(Protocol):
 ```
 
 Every candidate carries `item_id`, source provenance, retrieval score, feature/model versions, and eligibility state. The response carries request/model/policy versions. Stable contracts let the companion implementation swap popularity and embedding retrieval, compare rankers, inject dependency failures, and verify deterministic fallbacks.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/recommendation-component-contracts.svg" target="_blank" rel="noreferrer"><img src="assets/recommendation-component-contracts.svg" alt="Component diagram showing FeedOrchestrator calling several CandidateSource implementations and a Ranker in parallel, feeding a SlatePolicy that composes the final slate and emits a durable exposure event"></a>
+  <figcaption>Three narrow interfaces, not one class that knows everything: SlatePolicy is the only stage that sees the whole ranked list at once.</figcaption>
+</figure>
 
 The serving sequence is:
 

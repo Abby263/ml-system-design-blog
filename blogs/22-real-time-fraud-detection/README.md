@@ -29,8 +29,8 @@ We will treat this as a live system-design interview. We begin with an ambiguous
 ### Start With the Interview Prompt
 
 <aside class="interview-dialogue">
-  <p><strong>Interviewer</strong> Design a real-time fraud-detection system for a global payment platform.</p>
-  <p><strong>Candidate</strong> Before I draw anything, I'd like to ask a few questions — that sentence alone doesn't tell me enough to start.</p>
+  <p><strong>Interviewer</strong> We process a high volume of card payments every day across our platform. For each one, we need to decide in real time whether to let it through — and that decision has to keep working as fraud patterns shift and attackers actively adapt to whatever we ship. Design that system end to end.</p>
+  <p><strong>Candidate</strong> Before I draw anything, I'd like to ask a few questions — that prompt alone doesn't tell me enough to start.</p>
 </aside>
 
 Our first whiteboard therefore contains only the unresolved decision:
@@ -306,6 +306,12 @@ The roadmap is stated before the detailed data and serving discussion: V0 combin
 The mature system is not the one with the most models. It is the one that can answer: what did we know, why did we act, what did that action hide, how did the outcome arrive, and how quickly can we change without giving an attacker or an outage a larger opening?
 
 ## Data and Labels
+
+### System API Design
+
+The synchronous contract is one endpoint: `POST /v1/risk-decisions`. Versioning lives in the URL prefix — a breaking response change ships as `/v2/` behind a compatibility window rather than mutating `/v1/` under callers who already depend on it. The caller supplies an `Idempotency-Key` header; the service treats a repeated key with an identical body as the same logical request, and a repeated key with a different body as a client error, never a silent overwrite.
+
+Error semantics are typed and deliberately small: `400` for a malformed or unparseable request, `409` for an idempotency-key conflict, and a documented degraded decision (still `200`, with `degraded: true` in the body) rather than a bare `503` whenever the service can produce a safe fallback action. A caller that cannot parse the response falls back to its own default; it never blocks checkout waiting for a retry against this endpoint.
 
 ### Design the Event and Decision Contracts
 
@@ -702,6 +708,35 @@ Hot entities are expected during card testing. Salting can spread write load but
   <p><strong>Candidate</strong> A broker guarantee does not cover every database, cache, and external effect end to end. I use stable event identities, atomic state transitions where needed, idempotent consumers, and replay tests. That makes duplicate delivery harmless without relying on a vague global exactly-once claim.</p>
 </aside>
 
+### Backend Architecture: Services and Boundaries
+
+HLD V0 is a modular monolith: one deployable process with `FeatureProvider`, `RuleEvaluator`, `RiskScorer`, `DecisionPolicy`, and `DecisionLedger` as separate, independently testable modules that still talk to each other as ordinary function calls. HLD V1 pulls apart exactly the boundaries that measurably needed it — the risk gateway, online feature service, model server, policy engine, decision ledger/outbox, stream processor, and case service — because each one now has a different scaling shape (CPU-bound rules versus GPU/accelerator model serving), a different release cadence (model teams ship independently of the gateway), or a different failure domain (an experimental candidate source or a case-management workload should never be able to take checkout down with it).
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/backend-services-boundary.svg" target="_blank" rel="noreferrer"><img src="assets/backend-services-boundary.svg" alt="Backend service boundary diagram showing the HLD V0 modular monolith modules on the left and the HLD V1 extracted risk gateway, feature service, model server, policy engine, ledger, stream processor, and case service on the right, each tagged with its scaling, release, or failure-isolation reason"></a>
+  <figcaption>Every extracted box answers one question: what measured scaling, release, or failure boundary justified paying for the network hop?</figcaption>
+</figure>
+
+The test for every additional boundary is the same one used throughout this article: can the risk gateway still produce a safe, degraded response if this service disappears for ten minutes? If yes, the split is buying real isolation. If no, either the dependency is too tightly coupled to the request path or its fallback is unfinished — and the fix is a better fallback, not fewer services.
+
+Costs of splitting are real and worth naming out loud: an extra network hop and its own tail latency, a schema to version, a fallback to test, and one more on-call surface. A "risk service" that calls twelve tiny feature microservices serially, each adding its own p50, is a distributed latency bug wearing an architecture diagram. Batch calls, keep synchronous hops few, and extract a service because ownership, scaling, runtime, or failure isolation changed — never because microservices are the default shape for an ML system.
+
+### Frontend and Client Architecture
+
+The risk service has exactly one caller in the synchronous path: the payment orchestrator, not the customer's browser or app directly. That caller owns translating a typed decision into something a shopper actually sees, and the four actions map to four distinct client experiences:
+
+- `ALLOW` — checkout continues with no visible change; the client never learns a risk score existed.
+- `CHALLENGE` — the client renders a 3DS or OTP prompt inline in the existing checkout flow, with its own bounded timeout; if the challenge isn't completed in time, the orchestrator treats it as abandoned, not as an error to retry against the risk service.
+- `REVIEW` — the client shows an "order confirmed, pending verification" state; fulfillment is held server-side, not by the client polling in a loop.
+- `BLOCK` — the client shows a generic decline, deliberately without the reason code or the exact rule that fired; specific thresholds are attacker-facing information, not customer-facing copy.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/client-decision-states.svg" target="_blank" rel="noreferrer"><img src="assets/client-decision-states.svg" alt="Diagram showing the payment orchestrator receiving a RiskDecision and rendering four distinct client experiences for allow, challenge, review, and block, plus client-side rules about latency budget, degraded responses, and not surfacing raw scores"></a>
+  <figcaption>The client is a caller, not a decision-maker: it renders what the orchestrator sends and reports back challenge completion, never overriding or retrying against the risk decision itself.</figcaption>
+</figure>
+
+The client's own latency budget sits on top of the 80 ms risk deadline, not instead of it: connection setup, the payment processor's own round trip, and rendering each add their own tail. If the risk service times out or returns `degraded: true`, the client does not surface that fact verbatim — it follows the orchestrator's documented fallback copy, because "our fraud system is down" is both alarming and useless to a shopper mid-checkout.
+
 ## Reliability, Security, Deployment, and Observability
 
 ### Train, Promote, Shadow, and Roll Back Safely
@@ -966,6 +1001,11 @@ Important invariants:
 - rules and policy evaluation are deterministic for the same inputs;
 - labels append and can be corrected, but do not mutate the historical decision;
 - analysts can explain a decision from stored evidence even after models change.
+
+<figure class="technical-figure wide-figure">
+  <a href="assets/risk-service-component-contracts.svg" target="_blank" rel="noreferrer"><img src="assets/risk-service-component-contracts.svg" alt="Component diagram showing FraudDecisionService calling FeatureProvider, RuleEvaluator, and RiskScorer in parallel, feeding DecisionPolicy, which produces a RiskDecision that DecisionLedger appends and publishes"></a>
+  <figcaption>Five narrow interfaces, not one class that knows everything: DecisionPolicy is the only component allowed to resolve action severity.</figcaption>
+</figure>
 
 <figure class="technical-figure wide-figure">
   <a href="assets/decision-ledger-state.svg" target="_blank" rel="noreferrer"><img src="assets/decision-ledger-state.svg" alt="Append-only fraud decision ledger showing request, immutable decision, interventions, outcomes, labels, appeals, and corrections"></a>

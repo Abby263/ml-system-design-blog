@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 800" role="img" aria-labelledby="title desc">
+  <title id="title">Backend service boundary from modular monolith to extracted services</title>
+  <desc id="desc">HLD V0 keeps FeatureProvider, RuleEvaluator, RiskScorer, DecisionPolicy, and DecisionLedger as modules in one process. HLD V1 extracts a risk gateway, online feature service, model server, policy engine, decision ledger and outbox, stream processor, and case service once each has a measured scaling, release, or failure-isolation reason to split.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:3;marker-end:url(#arrow)}.k{font:700 12px ui-monospace,monospace;letter-spacing:1.4px;fill:#777a70}.h{font:700 24px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 14px Inter,Arial,sans-serif;fill:#11120f}.s{font:500 11px Inter,Arial,sans-serif;fill:#55584f}.tag{font:700 10px ui-monospace,monospace;letter-spacing:.6px;fill:#4e62a8}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+  </defs>
+  <rect class="bg" width="1500" height="800"/>
+  <text class="k" x="50" y="42">BACKEND ARCHITECTURE · SPLIT ONLY WHERE THE BOUNDARY IS MEASURED</text>
+  <text class="h" x="50" y="78">One deployable process until scaling, release, or failure isolation says otherwise.</text>
+
+  <rect class="group" x="50" y="115" width="430" height="620" rx="6"/>
+  <text class="k" x="74" y="150">HLD V0 · MODULAR MONOLITH</text>
+  <text class="s" x="74" y="172">one process · in-process calls · one deploy</text>
+
+  <g transform="translate(74 195)">
+    <rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">FeatureProvider</text><text class="s" x="16" y="45">entity snapshots, velocity aggregates</text>
+  </g>
+  <g transform="translate(74 268)">
+    <rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">RuleEvaluator</text><text class="s" x="16" y="45">versioned deterministic controls</text>
+  </g>
+  <g transform="translate(74 341)">
+    <rect class="blue" width="382" height="60" rx="5"/><text class="t" x="16" y="25">RiskScorer</text><text class="s" x="16" y="45">calibrated GBDT inference</text>
+  </g>
+  <g transform="translate(74 414)">
+    <rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">DecisionPolicy</text><text class="s" x="16" y="45">score + rules → allow/challenge/review/block</text>
+  </g>
+  <g transform="translate(74 487)">
+    <rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">DecisionLedger</text><text class="s" x="16" y="45">append-only, outbox to the stream</text>
+  </g>
+  <text class="s" x="74" y="600">One team owns the whole path. All five modules share</text>
+  <text class="s" x="74" y="618">a scaling profile and a deploy cadence. Local calls keep</text>
+  <text class="s" x="74" y="636">the 80 ms deadline simple to reason about.</text>
+
+  <path class="arrow" d="M495 425H565"/>
+  <text class="tag" x="500" y="405">MEASURED BOUNDARY CHANGED</text>
+  <text class="s" x="500" y="445">GPU vs CPU scaling ·</text>
+  <text class="s" x="500" y="461">independent releases ·</text>
+  <text class="s" x="500" y="477">stateful stream ·</text>
+  <text class="s" x="500" y="493">separate workload</text>
+
+  <rect class="group" x="580" y="115" width="870" height="620" rx="6"/>
+  <text class="k" x="604" y="150">HLD V1 · EXTRACTED SERVICES</text>
+  <text class="s" x="604" y="172">split by scaling shape, release ownership, or failure domain</text>
+
+  <g transform="translate(604 195)"><rect class="lime" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Risk gateway</text><text class="s" x="16" y="46">deadline owner · idempotency · auth</text></g>
+  <g transform="translate(1024 195)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Online feature service</text><text class="s" x="16" y="46">scaling shape · low-latency KV batch-get</text></g>
+
+  <g transform="translate(604 274)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Rule engine</text><text class="s" x="16" y="46">release cadence · versioned, independently shipped</text></g>
+  <g transform="translate(1024 274)"><rect class="blue" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Model server</text><text class="s" x="16" y="46">scaling shape · GPU/accelerator batching</text></g>
+
+  <g transform="translate(604 353)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Policy engine</text><text class="s" x="16" y="46">release cadence · versioned, testable policy</text></g>
+  <g transform="translate(1024 353)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Decision ledger / outbox</text><text class="s" x="16" y="46">durable, publishes after response</text></g>
+
+  <g transform="translate(604 432)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Stream processor</text><text class="s" x="16" y="46">failure domain · naturally async</text></g>
+  <g transform="translate(1024 432)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Case service</text><text class="s" x="16" y="46">failure domain · different workload entirely</text></g>
+
+  <text class="s" x="604" y="545">Boundary test for every extraction: can the risk gateway still return a safe,</text>
+  <text class="s" x="604" y="563">degraded decision if this service disappears for ten minutes?</text>
+  <text class="s" x="604" y="591">If not, either the dependency is too tightly coupled, or its fallback is unfinished —</text>
+  <text class="s" x="604" y="609">the fix is a better fallback, not fewer services.</text>
+  <rect class="muted" x="604" y="630" width="820" height="80" rx="5"/>
+  <text class="t" x="624" y="656">Cost of splitting</text>
+  <text class="s" x="624" y="678">network tail latency · schema versioning · duplicated context · one more on-call surface</text>
+  <text class="s" x="624" y="696">A gateway calling twelve tiny feature microservices serially is a distributed latency bug.</text>
+</svg>

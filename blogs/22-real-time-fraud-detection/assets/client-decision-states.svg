@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 650" role="img" aria-labelledby="title desc">
+  <title id="title">Payment client states for each risk decision action</title>
+  <desc id="desc">The payment orchestrator, not the browser or app directly, calls the risk service. It translates ALLOW, CHALLENGE, REVIEW, and BLOCK into four distinct client experiences, none of which expose the raw risk score or reason code to the shopper.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:2.5;marker-end:url(#arrow)}
+      .k{font:700 12px ui-monospace,monospace;letter-spacing:1.4px;fill:#777a70}.h{font:700 22px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 15px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 15px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 11.5px Inter,Arial,sans-serif;fill:#55584f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+  </defs>
+  <rect class="bg" width="1500" height="650"/>
+  <text class="k" x="50" y="42">FRONTEND AND CLIENT ARCHITECTURE</text>
+  <text class="h" x="50" y="76">One typed decision in; four different checkout experiences out.</text>
+
+  <g transform="translate(50 290)"><rect class="dark" width="230" height="80" rx="5"/><text class="tw" x="115" y="34" text-anchor="middle">Payment orchestrator</text><text class="tw" x="115" y="56" text-anchor="middle" style="font:500 11px ui-monospace,monospace">receives RiskDecision</text></g>
+
+  <path class="arrow" d="M280 305 380 160"/>
+  <path class="arrow" d="M280 320 380 280"/>
+  <path class="arrow" d="M280 340 380 400"/>
+  <path class="arrow" d="M280 355 380 520"/>
+
+  <g transform="translate(380 110)"><rect class="node" width="330" height="100" rx="5"/><text class="t" x="20" y="30">ALLOW</text><text class="s" x="20" y="53">Checkout continues with no visible</text><text class="s" x="20" y="71">change — the client never learns a</text><text class="s" x="20" y="89">risk score existed.</text></g>
+
+  <g transform="translate(380 230)"><rect class="lime" width="330" height="100" rx="5"/><text class="t" x="20" y="30">CHALLENGE</text><text class="s" x="20" y="53">Inline 3DS / OTP prompt with its own</text><text class="s" x="20" y="71">bounded timeout; a timeout is treated</text><text class="s" x="20" y="89">as abandoned, not retried.</text></g>
+
+  <g transform="translate(380 350)"><rect class="blue" width="330" height="100" rx="5"/><text class="t" x="20" y="30">REVIEW</text><text class="s" x="20" y="53">"Order confirmed, pending verification."</text><text class="s" x="20" y="71">Fulfillment holds server-side —</text><text class="s" x="20" y="89">the client does not poll in a loop.</text></g>
+
+  <g transform="translate(380 470)"><rect class="node" width="330" height="100" rx="5"/><text class="t" x="20" y="30">BLOCK</text><text class="s" x="20" y="53">Generic decline, deliberately without</text><text class="s" x="20" y="71">the reason code — thresholds are</text><text class="s" x="20" y="89">attacker-facing, not customer-facing.</text></g>
+
+  <rect class="group" x="770" y="110" width="680" height="460" rx="6"/>
+  <text class="k" x="794" y="146">CLIENT-SIDE RULES THAT HOLD FOR ALL FOUR</text>
+
+  <text class="t" x="794" y="188">The client's latency budget sits on top of the 80 ms</text>
+  <text class="s" x="794" y="208">risk deadline, not instead of it — connection setup, the</text>
+  <text class="s" x="794" y="226">processor's own round trip, and rendering each add tail.</text>
+
+  <text class="t" x="794" y="268">A degraded response renders exactly like a normal one</text>
+  <text class="s" x="794" y="288">— the client checks `degraded: true` for its own telemetry,</text>
+  <text class="s" x="794" y="306">but never surfaces "our fraud system is down" mid-checkout.</text>
+
+  <text class="t" x="794" y="348">Raw scores, rejected candidates, and reason codes never</text>
+  <text class="s" x="794" y="368">reach the client — those exist for logs and analyst tooling,</text>
+  <text class="s" x="794" y="386">not for a shopper's browser.</text>
+
+  <text class="t" x="794" y="428">The client is a caller, not a decision-maker</text>
+  <text class="s" x="794" y="448">— it renders what the orchestrator sends and reports back</text>
+  <text class="s" x="794" y="466">challenge completion or abandonment; it never overrides,</text>
+  <text class="s" x="794" y="484">retries against, or second-guesses the risk decision itself.</text>
+
+  <rect class="muted" x="794" y="512" width="632" height="42" rx="5"/>
+  <text class="s" x="814" y="533">A retried CHALLENGE after a timeout would double-attempt the same idempotency key — the client waits.</text>
+</svg>

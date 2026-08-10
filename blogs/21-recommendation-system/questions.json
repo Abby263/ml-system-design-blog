@@ -209,7 +209,7 @@
       "followUp": "Which signals truly require global freshness, and which can tolerate eventual replication?"
     },
     {
-      "sectionId": "decide-between-a-modular-monolith-and-microservices",
+      "sectionId": "backend-architecture-services-and-boundaries",
       "prompt": "One team owns a 200 RPS recommendation path whose stages scale together. Should it start as six networked services?",
       "options": [
         { "text": "Yes, because ML systems require microservices", "feedback": "ML does not remove the latency, deployment, and failure costs of unnecessary service boundaries." },
@@ -220,6 +220,19 @@
       "answer": 2,
       "explanation": "Service boundaries should correspond to measurable independence. Until then, local calls simplify deadlines, transactions, debugging, and coordinated change.",
       "followUp": "Which first component would you extract if candidate retrieval starts scaling independently?"
+    },
+    {
+      "sectionId": "frontend-and-client-architecture",
+      "prompt": "The feed service returns a response with `degraded: true` and a non-personalized, cached slate. What should the app client do?",
+      "options": [
+        { "text": "Show a blank feed with a message that recommendations are temporarily unavailable", "feedback": "A blank screen or visible error is a worse outcome than a less-personalized but still useful feed." },
+        { "text": "Render it exactly like a normal feed and forward `degraded: true` only to internal telemetry", "feedback": "Correct. The client's job is to display whatever slate it receives consistently, not to narrate a backend outage to the viewer." },
+        { "text": "Retry the request repeatedly until a non-degraded response arrives", "feedback": "Retrying inside the feed load risks missing the latency budget and amplifying load on an already-struggling dependency." },
+        { "text": "Fall back to a locally hardcoded list of videos", "feedback": "That discards the server's policy-safe fallback, which already accounts for eligibility and safety filtering." }
+      ],
+      "answer": 1,
+      "explanation": "A degraded response is still a valid, policy-safe decision. The client renders it the same way it renders any other response and only distinguishes it internally for observability.",
+      "followUp": "What should the client do differently, if anything, when the response is served from its own stale local cache rather than from the server's degraded path?"
     },
     {
       "sectionId": "map-the-design-to-aws-and-google-cloud",

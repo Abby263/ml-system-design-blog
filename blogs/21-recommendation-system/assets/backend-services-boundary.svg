@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 800" role="img" aria-labelledby="title desc">
+  <title id="title">Backend service boundary from modular monolith to extracted services</title>
+  <desc id="desc">Scenario 1 keeps candidate interfaces, feature assembly, ranking, and re-ranking as modules in one feed service. Scenario 3 extracts regional orchestration, candidate services, an online feature service, CPU pre-ranking, GPU ranking, re-ranking, event ingestion, and training once each has a measured scaling, ownership, or failure-isolation reason to split.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.muted{fill:#dcded6;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:3;marker-end:url(#arrow)}.k{font:700 12px ui-monospace,monospace;letter-spacing:1.4px;fill:#777a70}.h{font:700 24px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 14px Inter,Arial,sans-serif;fill:#11120f}.s{font:500 11px Inter,Arial,sans-serif;fill:#55584f}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+  </defs>
+  <rect class="bg" width="1500" height="800"/>
+  <text class="k" x="50" y="42">BACKEND ARCHITECTURE · SPLIT ONLY WHERE THE BOUNDARY IS MEASURED</text>
+  <text class="h" x="50" y="78">One deployable process until scaling, release, or failure isolation says otherwise.</text>
+
+  <rect class="group" x="50" y="115" width="430" height="620" rx="6"/>
+  <text class="k" x="74" y="150">SCENARIO 1 · MODULAR MONOLITH</text>
+  <text class="s" x="74" y="172">one process · in-process calls · one deploy</text>
+
+  <g transform="translate(74 195)"><rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">CandidateSource impls</text><text class="s" x="16" y="45">trending, co-watch, subscriptions</text></g>
+  <g transform="translate(74 268)"><rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">Feature assembly</text><text class="s" x="16" y="45">request-scoped hydration</text></g>
+  <g transform="translate(74 341)"><rect class="blue" width="382" height="60" rx="5"/><text class="t" x="16" y="25">Ranker</text><text class="s" x="16" y="45">logistic regression or GBDT</text></g>
+  <g transform="translate(74 414)"><rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">SlatePolicy (re-ranker)</text><text class="s" x="16" y="45">dedupe, diversity, eligibility</text></g>
+  <g transform="translate(74 487)"><rect class="node" width="382" height="60" rx="5"/><text class="t" x="16" y="25">Exposure logging</text><text class="s" x="16" y="45">candidate-level impression events</text></g>
+  <text class="s" x="74" y="600">One team owns the whole path. All five modules</text>
+  <text class="s" x="74" y="618">share a scaling profile. Batch training is already a</text>
+  <text class="s" x="74" y="636">separate job because its lifecycle already differs.</text>
+
+  <path class="arrow" d="M495 425H565"/>
+  <text class="s" x="500" y="405" style="font:700 11px ui-monospace,monospace;fill:#4e62a8">MEASURED BOUNDARY CHANGED</text>
+  <text class="s" x="500" y="445">memory- vs GPU-bound ·</text>
+  <text class="s" x="500" y="461">independent releases ·</text>
+  <text class="s" x="500" y="477">experimental source isolation ·</text>
+  <text class="s" x="500" y="493">cross-surface reuse</text>
+
+  <rect class="group" x="580" y="115" width="870" height="620" rx="6"/>
+  <text class="k" x="604" y="150">SCENARIO 3 · EXTRACTED SERVICES</text>
+  <text class="s" x="604" y="172">split by scaling shape, release ownership, or failure domain</text>
+
+  <g transform="translate(604 195)"><rect class="lime" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Regional feed orchestrator</text><text class="s" x="16" y="46">deadline owner · degradation</text></g>
+  <g transform="translate(1024 195)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Candidate services</text><text class="s" x="16" y="46">scaling shape · per source, memory-heavy ANN</text></g>
+
+  <g transform="translate(604 274)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Online feature service</text><text class="s" x="16" y="46">scaling shape · high-throughput exact-key reads</text></g>
+  <g transform="translate(1024 274)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Pre-ranking CPU fleet</text><text class="s" x="16" y="46">scaling shape · wide cheap fan-out</text></g>
+
+  <g transform="translate(604 353)"><rect class="blue" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Heavy-ranking GPU fleet</text><text class="s" x="16" y="46">scaling shape · batched candidate tensors</text></g>
+  <g transform="translate(1024 353)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Re-ranking library/service</text><text class="s" x="16" y="46">release cadence · versioned slate policy</text></g>
+
+  <g transform="translate(604 432)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Event ingestion</text><text class="s" x="16" y="46">failure domain · decouples client traffic</text></g>
+  <g transform="translate(1024 432)"><rect class="node" width="400" height="66" rx="5"/><text class="t" x="16" y="26">Training platform / registry</text><text class="s" x="16" y="46">failure domain · off the serving path entirely</text></g>
+
+  <text class="s" x="604" y="545">Boundary test for every extraction: can the feed orchestrator still produce a safe</text>
+  <text class="s" x="604" y="563">response if this service disappears for ten minutes?</text>
+  <text class="s" x="604" y="591">If not, either the dependency is too tightly coupled, or its fallback is unfinished —</text>
+  <text class="s" x="604" y="609">the fix is a better fallback, not fewer services.</text>
+  <rect class="muted" x="604" y="630" width="820" height="80" rx="5"/>
+  <text class="t" x="624" y="656">Cost of splitting</text>
+  <text class="s" x="624" y="678">network tail latency · schema versioning · duplicated context · one more on-call surface</text>
+  <text class="s" x="624" y="696">A feed calling hundreds of tiny candidate RPCs serially is a distributed latency bug.</text>
+</svg>

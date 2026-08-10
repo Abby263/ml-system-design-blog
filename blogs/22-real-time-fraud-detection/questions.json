@@ -196,6 +196,32 @@
       "followUp": "How should late events change an event-time window without rewriting a decision that has already been returned?"
     },
     {
+      "sectionId": "backend-architecture-services-and-boundaries",
+      "prompt": "A junior engineer proposes splitting the rule engine, feature provider, and policy engine into three services this sprint, before any of them has a scaling or ownership problem. What should you push back with?",
+      "options": [
+        { "text": "Agree, because more services always make a system more scalable", "feedback": "Splitting without a measured boundary adds network hops, schemas, and on-call surface without buying isolation." },
+        { "text": "Ask what scaling, release-ownership, or failure-isolation boundary makes each split necessary right now", "feedback": "Correct. A service boundary should answer a real, current constraint, not anticipate one." },
+        { "text": "Refuse any service extraction permanently", "feedback": "Extraction is justified once a boundary is real, such as GPU-bound scoring versus CPU-bound rules." },
+        { "text": "Let each engineer choose their own service boundary independently", "feedback": "Uncoordinated boundaries produce duplicated context and inconsistent fallback behavior." }
+      ],
+      "answer": 1,
+      "explanation": "The boundary test is whether the risk gateway can still return a safe response if a given service disappears for ten minutes. Splitting ahead of a measured need only adds distributed-systems cost.",
+      "followUp": "Which of the five HLD V0 modules would you expect to need its own service first, and what measurement would confirm it?"
+    },
+    {
+      "sectionId": "frontend-and-client-architecture",
+      "prompt": "The risk service times out and the fallback returns `degraded: true` with a cached, conservative decision. What should the checkout client do with that information?",
+      "options": [
+        { "text": "Show the customer a message that the fraud system is down", "feedback": "That is alarming, exposes internal system state, and gives the customer no useful action to take." },
+        { "text": "Render the decision the same way it renders a normal one, and log `degraded: true` for internal telemetry only", "feedback": "Correct. A degraded decision is still a decision; the client's job is to act on it, not narrate the outage." },
+        { "text": "Retry the risk service repeatedly until it responds normally", "feedback": "Retrying inside the checkout flow risks duplicate side effects and blows the latency budget." },
+        { "text": "Silently allow the payment regardless of the returned action", "feedback": "That discards the fallback policy the risk service already computed and reintroduces the exact risk it was managing." }
+      ],
+      "answer": 1,
+      "explanation": "The client is a caller, not a decision-maker. It renders whatever typed action it receives and reports outcomes back, without exposing internal degradation to the shopper or overriding the decision itself.",
+      "followUp": "Which of the four actions should never be silently downgraded by the client, even under a network error?"
+    },
+    {
       "sectionId": "add-graph-evidence-without-putting-graph-traversal-on-checkout",
       "prompt": "Shared devices and bank accounts reveal fraud rings, but a multi-hop graph query takes 400 ms at p99. How should the signal reach checkout?",
       "options": [

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 760" role="img" aria-labelledby="title desc">
+  <title id="title">Low-level component contracts for the fraud decision service</title>
+  <desc id="desc">FraudDecisionService orchestrates FeatureProvider, RuleEvaluator, and RiskScorer in parallel, then hands their outputs to DecisionPolicy, which produces a RiskDecision that DecisionLedger appends and publishes through an outbox.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fafaf5}.group{fill:#f0f0e9;stroke:#11120f;stroke-width:2}.node{fill:#fafaf5;stroke:#11120f;stroke-width:2}.blue{fill:#8da8ff;stroke:#11120f;stroke-width:2}.lime{fill:#d9ff63;stroke:#11120f;stroke-width:2}.dark{fill:#11120f;stroke:#11120f;stroke-width:2}.arrow{fill:none;stroke:#11120f;stroke-width:2.5;marker-end:url(#arrow)}
+      .k{font:700 12px ui-monospace,monospace;letter-spacing:1.4px;fill:#777a70}.h{font:700 22px Inter,Arial,sans-serif;fill:#11120f}.t{font:700 15px Inter,Arial,sans-serif;fill:#11120f}.tw{font:700 15px Inter,Arial,sans-serif;fill:#fafaf5}.s{font:500 11px ui-monospace,monospace;fill:#55584f}.sw{font:500 11px ui-monospace,monospace;fill:#c8cbc2}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#11120f"/></marker>
+  </defs>
+  <rect class="bg" width="1500" height="760"/>
+  <text class="k" x="50" y="42">LLD · COMPONENT CONTRACTS</text>
+  <text class="h" x="50" y="76">Five narrow interfaces, not one class that knows everything.</text>
+
+  <g transform="translate(50 150)"><rect class="dark" width="260" height="90" rx="5"/><text class="tw" x="130" y="36" text-anchor="middle">FraudDecisionService</text><text class="sw" x="130" y="60" text-anchor="middle">Decide(request, deadline)</text><text class="sw" x="130" y="76" text-anchor="middle">-&gt; RiskDecision</text></g>
+
+  <text class="s" x="335" y="98">parallel · child deadlines</text>
+  <g transform="translate(430 110)"><rect class="node" width="270" height="90" rx="5"/><text class="t" x="135" y="34" text-anchor="middle">FeatureProvider</text><text class="s" x="135" y="58" text-anchor="middle">get(entities, as_of)</text><text class="s" x="135" y="76" text-anchor="middle">-&gt; FeatureValue[]</text></g>
+  <g transform="translate(430 220)"><rect class="node" width="270" height="90" rx="5"/><text class="t" x="135" y="34" text-anchor="middle">RuleEvaluator</text><text class="s" x="135" y="58" text-anchor="middle">evaluate(rule_set, request)</text><text class="s" x="135" y="76" text-anchor="middle">-&gt; RuleMatch[]</text></g>
+  <g transform="translate(430 330)"><rect class="blue" width="270" height="90" rx="5"/><text class="t" x="135" y="34" text-anchor="middle">RiskScorer</text><text class="s" x="135" y="58" text-anchor="middle">predict(model_version, vector)</text><text class="s" x="135" y="76" text-anchor="middle">-&gt; RiskPrediction</text></g>
+
+  <path class="arrow" d="M310 195 430 155"/>
+  <path class="arrow" d="M310 195 430 265"/>
+  <path class="arrow" d="M310 195 430 375"/>
+
+  <g transform="translate(800 220)"><rect class="lime" width="280" height="90" rx="5"/><text class="t" x="140" y="34" text-anchor="middle">DecisionPolicy</text><text class="s" x="140" y="58" text-anchor="middle">resolve(score, rules, capacity)</text><text class="s" x="140" y="76" text-anchor="middle">-&gt; RiskDecision</text></g>
+  <path class="arrow" d="M700 155 800 250"/>
+  <path class="arrow" d="M700 265H800"/>
+  <path class="arrow" d="M700 375 800 290"/>
+
+  <g transform="translate(1160 220)"><rect class="dark" width="290" height="90" rx="5"/><text class="tw" x="145" y="34" text-anchor="middle">DecisionLedger</text><text class="sw" x="145" y="58" text-anchor="middle">append(decision) -&gt; ok</text><text class="sw" x="145" y="76" text-anchor="middle">publish via outbox</text></g>
+  <path class="arrow" d="M1080 265H1160"/>
+
+  <rect class="group" x="50" y="470" width="1400" height="250" rx="6"/>
+  <text class="k" x="74" y="505">INVARIANTS THIS SEAM PROTECTS</text>
+  <text class="t" x="74" y="540">Action severity is resolved only inside DecisionPolicy</text>
+  <text class="s" x="74" y="562">— never hidden inside a feature or a scorer, so the policy stays the single place that can change what happens.</text>
+  <text class="t" x="74" y="598">Every RiskDecision carries feature_version, model_version, and policy_version</text>
+  <text class="s" x="74" y="620">— the response and the ledger row share the same decision_id, so any decision is reproducible after models change.</text>
+  <text class="t" x="74" y="656">RuleEvaluator and RiskScorer never write to the ledger directly</text>
+  <text class="s" x="74" y="678">— only DecisionPolicy's output is durable, so a bug in scoring can be replayed against a decision that never shipped.</text>
+</svg>
