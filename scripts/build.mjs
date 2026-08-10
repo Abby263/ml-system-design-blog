@@ -149,11 +149,21 @@ const nav = (active = "") => `
     <nav class="desktop-nav" aria-label="Primary navigation">
       <a ${active === "blogs" ? 'aria-current="page"' : ""} href="/blogs/">Writing</a>
       <a ${active === "about" ? 'aria-current="page"' : ""} href="/about/">About</a>
+      <button class="theme-toggle" type="button" aria-label="Switch color theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>◐</span>
+        <span data-theme-label>Dark</span>
+      </button>
       <a class="nav-source" href="${GITHUB_URL}" target="_blank" rel="noreferrer">GitHub <span>↗</span></a>
     </nav>
-    <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-button>
-      <span></span><span></span>
-    </button>
+    <div class="mobile-header-actions">
+      <button class="theme-toggle theme-toggle-mobile" type="button" aria-label="Switch color theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-icon" aria-hidden="true" data-theme-icon>◐</span>
+        <span class="visually-hidden" data-theme-label>Dark</span>
+      </button>
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-button>
+        <span></span><span></span>
+      </button>
+    </div>
     <nav class="mobile-menu" aria-label="Mobile navigation" data-mobile-menu>
       <a href="/blogs/">Writing</a>
       <a href="/about/">About</a>
@@ -180,13 +190,29 @@ const page = ({ title, description, active = "", body, article = false }) => `<!
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="${escapeHtml(description)}">
-    <meta name="theme-color" content="#0d0e0c">
+    <meta name="theme-color" content="#f0f0e9" data-theme-color>
     <meta property="og:type" content="${article ? "article" : "website"}">
     <meta property="og:title" content="${escapeHtml(title)}">
     <meta property="og:description" content="${escapeHtml(description)}">
     <meta property="og:site_name" content="${SITE_NAME}">
     <title>${escapeHtml(title)}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("dml-theme");
+          const theme = saved === "light" || saved === "dark"
+            ? saved
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document.querySelector("[data-theme-color]")?.setAttribute(
+            "content",
+            theme === "dark" ? "#10120f" : "#f0f0e9",
+          );
+        } catch (_) {}
+      })();
+    </script>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
