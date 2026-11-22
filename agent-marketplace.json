@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "designing-ml-systems",
+  "repository": "Abby263/ml-system-design-blog",
+  "catalog": "listed",
+  "availability": "request_integration",
+  "name": "ML Systems Design Assistant",
+  "category": "Knowledge",
+  "description": "Use a library of ML systems guides and companion code to answer architecture questions.",
+  "request": "A question about an ML system or an architectural constraint.",
+  "response": "A design explanation with references to relevant library examples.",
+  "integration": {
+    "operation": "Retrieve relevant articles and return source links.",
+    "readiness": "The current project is a knowledge library. Add an indexed retrieval service before enabling a callable assistant."
+  }
+}
